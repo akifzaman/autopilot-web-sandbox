@@ -1,0 +1,29 @@
+{
+  "name": "autopilot-web-sandbox",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/api",
+    "packages/web"
+  ],
+  "scripts": {
+    "lint": "eslint . && tsc --noEmit && npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces",
+    "start": "npm run start -w @sandbox/api",
+    "e2e": "playwright test",
+    "dev": "npm run dev -w @sandbox/api & npm run dev -w @sandbox/web"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}

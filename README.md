@@ -1,5 +1,13 @@
 # autopilot-web-sandbox
 
-A small web app to test the AIDLC pipeline.
+Test bed for the Hermes Autopilot AIDLC pipeline: a TypeScript API (Fastify) and a React front-end (Vite) in
+one npm workspace. Features are added by the pipeline from the specs in `docs/`.
 
-Built with the Hermes Autopilot AIDLC pipeline. Specs, API contracts, test cases and the plan live in `docs/` (see `docs/README.md`).
+```bash
+npm ci
+npm run lint && npm test     # checks
+npm run e2e                  # Playwright (run `npx playwright install chromium` once)
+npm run build && npm start   # http://localhost:3000 (API under /api, front-end at /)
+```
+
+See `AGENTS.md` for the layout and the rules for AI agents.
