@@ -1,0 +1,71 @@
+stories:
+- id: S-1
+  as_a: team member
+  i_want: to add a task with a title and an optional due date
+  so_that: the team knows about work that needs doing and when it is due
+- id: S-2
+  as_a: team member
+  i_want: to mark a task done
+  so_that: finished work no longer shows up as outstanding
+- id: S-3
+  as_a: team member
+  i_want: to see the team's open tasks sorted by due date
+  so_that: I can see what is outstanding and what is due first
+acceptance_criteria:
+- id: AC-1
+  story: S-1
+  text: Adding a task with the title 'Write report' and no due date creates an open task with that title and no due date, and it appears in the open-tasks list.
+- id: AC-2
+  story: S-1
+  text: Adding a task with the title 'Write report' and the due date 2026-11-15 creates an open task with exactly that title and due date.
+- id: AC-3
+  story: S-1
+  text: Adding a task with an empty title is rejected with a 'title is required' message, and no task is created.
+- id: AC-4
+  story: S-1
+  text: Adding a task whose title is only whitespace (for example '   ') is rejected with a 'title is required' message, and no task is created.
+- id: AC-5
+  story: S-1
+  text: Adding a task whose title is exactly 200 characters long succeeds, and the full 200-character title is stored.
+- id: AC-6
+  story: S-1
+  text: Adding a task whose title is 201 characters long is rejected with a message that the title can be at most 200 characters, and no task is created.
+- id: AC-7
+  story: S-1
+  text: Adding a task with the title '  Write report  ' stores the title as 'Write report' (whitespace trimmed at both ends).
+- id: AC-8
+  story: S-1
+  text: A title that is 200 characters after trimming but longer before trimming (for example with surrounding spaces) is accepted.
+- id: AC-9
+  story: S-1
+  text: Adding a task with a due date that is not a valid calendar date (for example 2026-02-30 or 'tomorrow-ish') is rejected with an 'invalid due date' message, and no task is created.
+- id: AC-10
+  story: S-1
+  text: Adding a task with a due date in the past (for example 2020-01-01) succeeds, and the task is open.
+- id: AC-11
+  story: S-1
+  text: Adding two tasks with the same title and due date creates two separate open tasks, and both appear in the open-tasks list.
+- id: AC-12
+  story: S-2
+  text: Marking an open task done changes its status to done, and it no longer appears in the open-tasks list.
+- id: AC-13
+  story: S-2
+  text: Marking a task that is already done succeeds without an error, and the task stays done.
+- id: AC-14
+  story: S-2
+  text: Trying to mark done a task that doesn't exist returns a 'task not found' result and changes no task.
+- id: AC-15
+  story: S-3
+  text: The open-tasks list contains every open task and no done tasks.
+- id: AC-16
+  story: S-3
+  text: Open tasks due 2026-12-01, 2026-11-01 and 2026-11-15 are listed in the order 2026-11-01, 2026-11-15, 2026-12-01.
+- id: AC-17
+  story: S-3
+  text: Open tasks without a due date are listed after all open tasks that have one.
+- id: AC-18
+  story: S-3
+  text: Open tasks with the same due date, and open tasks without a due date, are listed in the order they were added, oldest first.
+- id: AC-19
+  story: S-3
+  text: When the team has no open tasks, the list shows an empty-state message (for example 'No open tasks') instead of an empty table.
