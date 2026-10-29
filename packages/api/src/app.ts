@@ -1,19 +1,25 @@
 import { existsSync } from 'node:fs';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { taskRoutes } from './routes/tasks.js';
+import { InMemoryTaskStore, type TaskStore } from './tasks/store.js';
 
 export interface AppOptions {
   /** Folder of the built front-end. When set and present, the API also serves it (one port for previews). */
   webDist?: string;
   logger?: boolean;
+  /** Task storage. Defaults to a new in-memory store per app. */
+  store?: TaskStore;
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
   const app = Fastify({ logger: options.logger ?? false });
+  const store = options.store ?? new InMemoryTaskStore();
 
   app.register(
     async (api) => {
       api.get('/health', async () => ({ status: 'ok' }));
+      await api.register(taskRoutes, { store });
     },
     { prefix: '/api' },
   );
