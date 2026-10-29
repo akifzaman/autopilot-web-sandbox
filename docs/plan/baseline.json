@@ -1,0 +1,542 @@
+{
+ "project": "autopilot-web-sandbox",
+ "draft": 1,
+ "constraints": {
+  "budget_hours": 40.0,
+  "deadline": "2026-12-15",
+  "sprint_days": 7,
+  "ai_cost_limit_usd": 30.0,
+  "review_hours_per_day": 3.0,
+  "set_by": "akif",
+  "set_at": "2026-10-29T06:29:58+00:00"
+ },
+ "priorities": [
+  "creating and listing tasks",
+  "editing and completing",
+  "filtering"
+ ],
+ "fit": {
+  "result": "within",
+  "checks": [
+   {
+    "name": "Effort",
+    "need": "13.9 h",
+    "have": "40.0 h left of 40 h",
+    "over": false
+   },
+   {
+    "name": "Time",
+    "need": "1 sprint(s) of 7 days",
+    "have": "6 sprint(s) until 2026-12-15",
+    "over": false
+   },
+   {
+    "name": "Review",
+    "need": "7.2 h, busiest sprint 1: 7.2 h",
+    "have": "15.0 h per sprint",
+    "over": false
+   },
+   {
+    "name": "AI cost",
+    "need": "$9.05",
+    "have": "$28.81 left of $30",
+    "over": false
+   }
+  ],
+  "totals": {
+   "hours": 13.9,
+   "ai_min": 52.0,
+   "test_min": 350.0,
+   "review_min": 430.0,
+   "ai_cost_usd": 9.05,
+   "sprints": 1,
+   "cost_per_ai_min": 0.174
+  }
+ },
+ "epics": [
+  {
+   "id": "E-1",
+   "title": "Create and list tasks",
+   "description": "Stories S-1 and S-3: add a task with a title and an optional due date (trimming, length and calendar-date rules), and see the team's open tasks sorted by due date, with undated tasks last, ties oldest first, and an empty state. Covers the task domain (U-1), POST and GET /api/tasks (U-2, U-3), the Tasks screen design, the open-task list (U-5) and the add-task form (U-6)."
+  },
+  {
+   "id": "E-2",
+   "title": "Complete tasks (mark done)",
+   "description": "Story S-2: mark an open task done. Marking it again is idempotent, and an unknown id returns 'task not found'. Done tasks leave the open list. Covers POST /api/tasks/{id}/done (U-4) and the Mark done button on each list row (U-7). The domain's markDone is built in E-1 (U-1)."
+  }
+ ],
+ "tasks": [
+  {
+   "id": "T-1",
+   "epic": "E-1",
+   "type": "design",
+   "track": "frontend",
+   "title": "Design: Tasks screen (list, add form, mark done, states)",
+   "description": "Write docs/design/tasks/screen.md, mockup.html and mockup.png for the single Tasks screen: the add-task form (title input, optional native date input, submit) with field-level error placement for the title_required, title_too_long and invalid_due_date messages; the open-task list in server order (title as plain text, due date or nothing), with a Mark done button per row whose accessible name includes the title; the 'No open tasks' empty state; loading and load-error states; and a 'Task not found' notice. Decide the page heading and whether the scaffold's 'API: ok' line stays (affects e2e/smoke.spec.ts).",
+   "units": [
+    "U-5",
+    "U-6",
+    "U-7"
+   ],
+   "acs": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-6",
+    "AC-9",
+    "AC-12",
+    "AC-14",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-19"
+   ],
+   "tcs": [],
+   "depends_on": [],
+   "ai_min": 4,
+   "test_min": 0,
+   "review_min": 45,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-2",
+   "epic": "E-1",
+   "type": "ui_tests",
+   "track": "frontend",
+   "title": "UI test cases for the Tasks screen",
+   "description": "From the approved design in docs/design/tasks/, write the UI test cases TC-UI-<n> in docs/tests/ (for example docs/tests/ui/tasks.md or a yaml file): load and empty state, adding with and without a due date, each validation message shown next to its field with the input kept, sorted placement after an add, Mark done removing the row with the order kept, the stale-task 'Task not found' notice, the empty state after the last done, and titles rendered as text (XSS).",
+   "units": [],
+   "acs": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-6",
+    "AC-9",
+    "AC-12",
+    "AC-14",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-18",
+    "AC-19"
+   ],
+   "tcs": [],
+   "depends_on": [
+    "T-1"
+   ],
+   "ai_min": 3,
+   "test_min": 15,
+   "review_min": 30,
+   "sprint": 1,
+   "provisional": true
+  },
+  {
+   "id": "T-3",
+   "epic": "E-1",
+   "type": "task",
+   "track": "backend",
+   "title": "Task domain: title and due-date validation",
+   "description": "Add packages/api/src/tasks/validation.ts (U-1, validation part). Trim the title with String.prototype.trim, then return title_required if it is empty or title_too_long if it is over 200 code points ([...s].length). Check dueDate with the strict ^\\d{4}-\\d{2}-\\d{2}$ regex plus a Date.UTC round-trip (leap years included). Omitted, null or '' means null. Collect all field errors with the exact messages from openapi.yaml. Return the normalised input or FieldError[]. Vitest unit tests with no HTTP.",
+   "units": [
+    "U-1"
+   ],
+   "acs": [
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6",
+    "AC-7",
+    "AC-8",
+    "AC-9"
+   ],
+   "tcs": [
+    "TC-1",
+    "TC-2",
+    "TC-3",
+    "TC-4",
+    "TC-5",
+    "TC-6",
+    "TC-7",
+    "TC-8",
+    "TC-9",
+    "TC-10",
+    "TC-11",
+    "TC-12"
+   ],
+   "depends_on": [],
+   "ai_min": 4,
+   "test_min": 20,
+   "review_min": 30,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-4",
+   "epic": "E-1",
+   "type": "task",
+   "track": "backend",
+   "title": "Task domain: TaskStore, InMemoryTaskStore and task service",
+   "description": "Add packages/api/src/tasks/store.ts (U-1): the TaskStore interface (insert, findById, listByStatus, setStatus) and InMemoryTaskStore (a Map, crypto.randomUUID, an ISO createdAt and a monotonic seq). Add service.ts: createTask (validate, then insert as open; nothing is stored on failure), listOpenTasks (filter open, sort with the pure compareOpenTasks: dueDate ascending, null last, seq ascending) and markDone (idempotent, with a not-found result). Vitest unit tests, including fake timers for the seq tie-break.",
+   "units": [
+    "U-1"
+   ],
+   "acs": [
+    "AC-3",
+    "AC-4",
+    "AC-6",
+    "AC-9",
+    "AC-10",
+    "AC-11",
+    "AC-12",
+    "AC-13",
+    "AC-14",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-18"
+   ],
+   "tcs": [
+    "TC-13",
+    "TC-14",
+    "TC-15",
+    "TC-16",
+    "TC-17",
+    "TC-18",
+    "TC-19",
+    "TC-20",
+    "TC-21",
+    "TC-22",
+    "TC-23",
+    "TC-24",
+    "TC-25"
+   ],
+   "depends_on": [
+    "T-3"
+   ],
+   "ai_min": 5,
+   "test_min": 25,
+   "review_min": 35,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-5",
+   "epic": "E-1",
+   "type": "task",
+   "track": "backend",
+   "title": "API: POST /api/tasks and GET /api/tasks (core contract)",
+   "description": "Register routes/tasks.ts under /api in buildApp(). Add the store?: TaskStore option to AppOptions (default: a new InMemoryTaskStore per app). Implement POST /api/tasks with the CreateTaskRequest JSON schema (additionalProperties false, title maxLength 10000, a missing title treated as title_required), mapping validation failures to 400 validation_failed with errors[] and success to 201 Task. Implement GET /api/tasks returning 200 { tasks } (open tasks only, in service order, no seq, ignoring query params). U-2 and U-3 are in one task because the POST test cases check results through GET and the GET cases seed through POST. Tests use app.inject.",
+   "units": [
+    "U-2",
+    "U-3"
+   ],
+   "acs": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6",
+    "AC-7",
+    "AC-8",
+    "AC-9",
+    "AC-10",
+    "AC-11",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-18"
+   ],
+   "tcs": [
+    "TC-26",
+    "TC-27",
+    "TC-28",
+    "TC-29",
+    "TC-30",
+    "TC-31",
+    "TC-32",
+    "TC-33",
+    "TC-34",
+    "TC-35",
+    "TC-36",
+    "TC-37",
+    "TC-38",
+    "TC-39",
+    "TC-46",
+    "TC-49",
+    "TC-50",
+    "TC-51",
+    "TC-52",
+    "TC-53"
+   ],
+   "depends_on": [
+    "T-4"
+   ],
+   "ai_min": 6,
+   "test_min": 35,
+   "review_min": 45,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-6",
+   "epic": "E-1",
+   "type": "task",
+   "track": "backend",
+   "title": "API: contract error handler, body limits and latency checks",
+   "description": "Add a custom Fastify error handler so every 400, 413, 415 and 500 body matches openapi.yaml: invalid_request for schema, parse and empty-body errors, 415 for non-JSON content types, and 500 { error: 'internal_error', message: 'Something went wrong' } with no internals (logged through the Fastify logger only). Set bodyLimit to 16 KiB. Add the latency tests for POST (p95 under 20 ms) and GET (p95 under 50 ms) with 1,000 open tasks.",
+   "units": [
+    "U-2",
+    "U-3"
+   ],
+   "acs": [
+    "AC-1",
+    "AC-3",
+    "AC-6",
+    "AC-15",
+    "AC-16"
+   ],
+   "tcs": [
+    "TC-40",
+    "TC-41",
+    "TC-42",
+    "TC-43",
+    "TC-44",
+    "TC-45",
+    "TC-47",
+    "TC-48",
+    "TC-54"
+   ],
+   "depends_on": [
+    "T-5"
+   ],
+   "ai_min": 5,
+   "test_min": 30,
+   "review_min": 40,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-7",
+   "epic": "E-1",
+   "type": "task",
+   "track": "frontend",
+   "title": "Tasks screen: API client and open-task list with empty state",
+   "description": "Add packages/web/src/api/tasks.ts, a typed fetch client with discriminated-union results (Task, ValidationFailed, NotFound, NetworkError) for all three operations. Replace the scaffold App content with TasksScreen and OpenTaskList, following docs/design/tasks/: load GET /api/tasks, render rows in server order (title as a text node, due date or nothing), show 'No open tasks' when the list is empty, and show loading and load-error states. Component tests next to the components and Playwright E2E. Update e2e/smoke.spec.ts as the approved design requires.",
+   "units": [
+    "U-5"
+   ],
+   "acs": [
+    "AC-1",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-18",
+    "AC-19"
+   ],
+   "tcs": [],
+   "depends_on": [
+    "T-1",
+    "T-5"
+   ],
+   "ai_min": 5,
+   "test_min": 35,
+   "review_min": 45,
+   "sprint": 1,
+   "provisional": true
+  },
+  {
+   "id": "T-8",
+   "epic": "E-1",
+   "type": "task",
+   "track": "frontend",
+   "title": "Add-task form",
+   "description": "AddTaskForm on the Tasks screen, following docs/design/tasks/: a title input, an optional <input type=\"date\"> and submit. It POSTs { title, dueDate? }, omitting an empty dueDate. On 201 it clears the inputs and re-fetches GET /api/tasks so the task appears in its sorted position. On 400 validation_failed it shows each errors[].message next to its field and keeps the values. There is no client-side duplicate of the validation rules. Component tests with the API mocked, and E2E for add, validation and duplicates.",
+   "units": [
+    "U-6"
+   ],
+   "acs": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6",
+    "AC-7",
+    "AC-8",
+    "AC-9",
+    "AC-10",
+    "AC-11"
+   ],
+   "tcs": [],
+   "depends_on": [
+    "T-1",
+    "T-5",
+    "T-7"
+   ],
+   "ai_min": 5,
+   "test_min": 35,
+   "review_min": 45,
+   "sprint": 1,
+   "provisional": true
+  },
+  {
+   "id": "T-9",
+   "epic": "E-1",
+   "type": "qa",
+   "track": "frontend",
+   "title": "QA: create and list tasks end to end",
+   "description": "Play-test E-1 on the production build (npm run build && npm start): run the E-1 TC-UI cases, and check every S-1 and S-3 acceptance criterion through the UI and the API (trimming, the 200/201 limits, invalid and past dates, duplicates, sort order, undated tasks last, oldest first on ties, the empty state). Report defects against the tasks.",
+   "units": [
+    "U-5",
+    "U-6"
+   ],
+   "acs": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6",
+    "AC-7",
+    "AC-8",
+    "AC-9",
+    "AC-10",
+    "AC-11",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-18",
+    "AC-19"
+   ],
+   "tcs": [],
+   "depends_on": [
+    "T-2",
+    "T-3",
+    "T-4",
+    "T-5",
+    "T-6",
+    "T-7",
+    "T-8"
+   ],
+   "ai_min": 4,
+   "test_min": 60,
+   "review_min": 30,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-10",
+   "epic": "E-2",
+   "type": "task",
+   "track": "backend",
+   "title": "API: POST /api/tasks/{id}/done",
+   "description": "Implement POST /api/tasks/{id}/done (no body; id minLength 1, maxLength 64) using service.markDone. It returns 200 Task with status 'done' for an open task and the unchanged task for an already-done one (including concurrent calls). Unknown, malformed, forged or over-long ids return 404 { error: 'not_found', message: 'task not found' }, and no task changes. Tests use app.inject, check that the task leaves GET /api/tasks, and check p95 latency under 20 ms.",
+   "units": [
+    "U-4"
+   ],
+   "acs": [
+    "AC-12",
+    "AC-13",
+    "AC-14",
+    "AC-15"
+   ],
+   "tcs": [
+    "TC-55",
+    "TC-56",
+    "TC-57",
+    "TC-58",
+    "TC-59"
+   ],
+   "depends_on": [
+    "T-4",
+    "T-5",
+    "T-6"
+   ],
+   "ai_min": 4,
+   "test_min": 25,
+   "review_min": 30,
+   "sprint": 1,
+   "provisional": false
+  },
+  {
+   "id": "T-11",
+   "epic": "E-2",
+   "type": "task",
+   "track": "frontend",
+   "title": "Mark task done from the list",
+   "description": "Add a Mark done button to each OpenTaskList row, following docs/design/tasks/, with the task title in its accessible name. It calls markTaskDone(id). On 200 it removes the row from the local list without re-sorting. On 404 it removes the row and shows the 'Task not found' notice. The button is disabled while its request is in flight. When the last row goes, the 'No open tasks' state appears. Component tests and Playwright E2E.",
+   "units": [
+    "U-7"
+   ],
+   "acs": [
+    "AC-12",
+    "AC-13",
+    "AC-14",
+    "AC-15",
+    "AC-19"
+   ],
+   "tcs": [],
+   "depends_on": [
+    "T-1",
+    "T-7",
+    "T-10"
+   ],
+   "ai_min": 4,
+   "test_min": 30,
+   "review_min": 35,
+   "sprint": 1,
+   "provisional": true
+  },
+  {
+   "id": "T-12",
+   "epic": "E-2",
+   "type": "qa",
+   "track": "frontend",
+   "title": "QA: complete tasks end to end",
+   "description": "Play-test E-2 on the production build: run the mark-done TC-UI cases, and check AC-12 to AC-15 and AC-19 through the UI and the API (done tasks leave the list with the remaining order kept, repeat mark-done is harmless, a stale or unknown id gives 'task not found' and changes nothing, the empty state appears after the last task is done). Report defects.",
+   "units": [
+    "U-7"
+   ],
+   "acs": [
+    "AC-12",
+    "AC-13",
+    "AC-14",
+    "AC-15",
+    "AC-19"
+   ],
+   "tcs": [],
+   "depends_on": [
+    "T-2",
+    "T-10",
+    "T-11"
+   ],
+   "ai_min": 3,
+   "test_min": 40,
+   "review_min": 20,
+   "sprint": 1,
+   "provisional": false
+  }
+ ],
+ "risks": [
+  "Risk: the Tasks screen design (T-1) is late or rejected, which blocks all front-end work (T-7, T-8, T-11) and the UI test cases. Mitigation: start T-1 on day 1, in parallel with the backend chain T-3 to T-6, and keep it to a single screen so one review round is likely enough.",
+  "Risk: the backend chain T-3 → T-4 → T-5 → T-6 → T-10 is sequential, so a slow review on one link pushes everything after it. Mitigation: review backend PRs first each day (reviewer capacity of 3 h/day is far above the about 7.3 h total), and keep each PR to the cases listed in the task.",
+  "Risk: the latency test cases (TC-48, TC-54, TC-59) may be flaky on shared CI runners. Mitigation: measure server-side duration around app.inject, warm up before measuring, and if CI is noisy, ask the Tech Lead whether to tag the latency tests and run them in a separate job.",
+  "Risk: replacing the scaffold page breaks e2e/smoke.spec.ts (the heading and 'API: ok' line), and the technical spec's question about this is still open. Mitigation: decide it in the design review (T-1), so T-7 updates the smoke test in the same PR.",
+  "Risk: open business questions Q-1 (teams and sign-in), Q-2 (reopen or view done tasks), Q-3 (past dates) and Q-4 (multi-line titles) could change the scope after work starts. Mitigation: the plan builds the current documented assumptions; ask the BA/PO to confirm them before sprint 1 starts, and add any change as a new task, not by editing tasks that are in flight.",
+  "Risk: the in-memory store loses tasks on restart, which can surprise people during QA play-tests. Mitigation: QA runs each check against a fresh server, and persistence (node:sqlite behind TaskStore) stays an explicit open question."
+ ],
+ "assumptions": [
+  "Priority 2 'editing and completing' is covered only by marking tasks done (S-2). The approved specs have no story or AC for editing a title or due date.",
+  "Priority 3 'filtering' is explicitly out of scope in docs/spec/business.md ('Filtering, searching, or sort orders other than by due date'), so no epic or tasks are planned for it.",
+  "U-2 and U-3 are combined in T-5 because the POST test cases check results through GET /api/tasks and the GET cases seed data through POST. U-1 is split into validation (T-3) and store/service (T-4) to keep each PR reviewable.",
+  "There is one design for the single Tasks screen (docs/design/tasks/), covering list, add form and mark done, with one ui_tests task. It sits in E-1 because E-1 is built first.",
+  "Estimates use the calibration data: about 1.5 to 2.8 min per coding run plus fix loops gives 3 to 6 AI min per task, about 52 AI min in total (about $9 at $0.174/min). The plan has about 380 test min and about 430 review min, roughly 14 h in total.",
+  "All work fits in one 7-day sprint (about 7.3 h of review against 21 h of reviewer capacity), so everything is in sprint 1, ordered by priority through the dependencies. That leaves a wide buffer before the 2026-12-15 deadline.",
+  "QA tasks are on the frontend track because they test end to end through the UI. They list only frontend units, so no task names units from the other track.",
+  "The in-memory store, no auth and no pagination follow the technical spec's current assumptions."
+ ]
+}
