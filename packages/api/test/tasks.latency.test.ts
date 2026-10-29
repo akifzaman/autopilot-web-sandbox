@@ -31,6 +31,34 @@ describe('latency with 1,000 open tasks', () => {
     expect(p95(durations)).toBeLessThan(20);
   });
 
+  it('TC-59 POST done p95 is under 20 ms', { timeout: 60_000 }, async () => {
+    const store = new InMemoryTaskStore();
+    const ids: string[] = [];
+    for (let i = 0; i < 1000; i++) ids.push(store.insert({ title: `Task ${i}`, dueDate: null }).id);
+    const app = buildApp({ store });
+    apps.push(app);
+    const done = (id: string) => app.inject({ method: 'POST', url: `/api/tasks/${id}/done` });
+    // Warm up on a separate app so the 800 remaining open tasks stay untouched.
+    const warmStore = new InMemoryTaskStore();
+    const warmApp = buildApp({ store: warmStore });
+    apps.push(warmApp);
+    for (let i = 0; i < 20; i++) {
+      const id = warmStore.insert({ title: `Warm ${i}`, dueDate: null }).id;
+      await warmApp.inject({ method: 'POST', url: `/api/tasks/${id}/done` });
+    }
+    const durations: number[] = [];
+    for (const id of ids.slice(0, 200)) {
+      const start = performance.now();
+      const res = await done(id);
+      durations.push(performance.now() - start);
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('done');
+    }
+    expect(p95(durations)).toBeLessThan(20);
+    const remaining = await app.inject({ method: 'GET', url: '/api/tasks' });
+    expect(remaining.json().tasks).toHaveLength(800);
+  });
+
   it('TC-54 GET p95 is under 50 ms', { timeout: 60_000 }, async () => {
     const store = new InMemoryTaskStore();
     const ids: string[] = [];

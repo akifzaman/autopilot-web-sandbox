@@ -243,6 +243,72 @@ describe('GET /api/tasks', () => {
   });
 });
 
+describe('POST /api/tasks/{id}/done', () => {
+  const done = (app: FastifyInstance, id: string) =>
+    app.inject({ method: 'POST', url: `/api/tasks/${id}/done` });
+  const notFound = { error: 'not_found', message: 'task not found' };
+
+  it('TC-55 marks an open task done and removes it from the list', async () => {
+    const app = make();
+    const a = (await post(app, { title: 'A' })).json();
+    const b = (await post(app, { title: 'B' })).json();
+    const c = (await post(app, { title: 'C' })).json();
+    const res = await done(app, b.id);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ ...b, status: 'done' });
+    expect((await list(app)).tasks).toEqual([a, c]);
+  });
+
+  it('TC-56 returns 200 unchanged for an already-done task, including concurrent calls', async () => {
+    const app = make();
+    const a = (await post(app, { title: 'A' })).json();
+    const first = await done(app, a.id);
+    const again = await done(app, a.id);
+    expect(again.statusCode).toBe(200);
+    expect(again.json()).toEqual(first.json());
+    const b = (await post(app, { title: 'B' })).json();
+    const both = await Promise.all([done(app, b.id), done(app, b.id)]);
+    for (const res of both) {
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('done');
+    }
+    expect((await list(app)).tasks).toEqual([]);
+  });
+
+  it('TC-57 returns 404 for an unknown id and changes nothing', async () => {
+    const app = make();
+    const a = (await post(app, { title: 'A' })).json();
+    const b = (await post(app, { title: 'B' })).json();
+    const res = await done(app, '3f1c2b9e-8d4a-4c1e-9b7a-2a6f0d1e5c33');
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual(notFound);
+    expect((await list(app)).tasks).toEqual([a, b]);
+  });
+
+  it('TC-58 returns 404 for malformed, forged and over-long ids', async () => {
+    const app = make();
+    const a = (await post(app, { title: 'A' })).json();
+    const flipped = a.id.slice(0, -1) + (a.id.endsWith('0') ? '1' : '0');
+    const ids = [
+      'abc',
+      'not-a-uuid',
+      encodeURIComponent("1' OR '1'='1"),
+      encodeURIComponent('../tasks'),
+      a.id.toUpperCase(),
+      flipped,
+      'a'.repeat(65),
+    ];
+    for (const id of ids) {
+      const res = await done(app, id);
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual(notFound);
+      expect(res.payload).not.toContain(a.id);
+      expect(res.payload).not.toContain(a.title);
+    }
+    expect((await list(app)).tasks).toEqual([a]);
+  });
+});
+
 describe('POST /api/tasks contract errors', () => {
   const raw = (app: FastifyInstance, payload: string, contentType: string) =>
     app.inject({
