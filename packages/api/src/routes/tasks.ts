@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { createTask, listOpenTasks } from '../tasks/service.js';
+import { createTask, listOpenTasks, markDone } from '../tasks/service.js';
 import type { Task, TaskStore } from '../tasks/store.js';
 import type { NewTaskInput } from '../tasks/validation.js';
 
@@ -17,6 +17,9 @@ const createTaskBodySchema = {
     dueDate: { type: ['string', 'null'] },
   },
 } as const;
+
+const MAX_ID_LENGTH = 64; // openapi TaskId parameter
+const notFoundBody = { error: 'not_found', message: 'task not found' } as const;
 
 type ApiTask = Omit<Task, 'seq'>;
 
@@ -46,6 +49,16 @@ export const taskRoutes: FastifyPluginAsync<TaskRoutesOptions> = async (app, { s
       return reply.code(201).send(toApiTask(result.task));
     },
   );
+
+  // No params schema: a schema failure would become 400 invalid_request, but the
+  // contract requires 404 not_found for malformed and over-long ids.
+  app.post<{ Params: { id: string } }>('/tasks/:id/done', async (request, reply) => {
+    const { id } = request.params;
+    if (id.length < 1 || id.length > MAX_ID_LENGTH) return reply.code(404).send(notFoundBody);
+    const result = markDone(store, id);
+    if (!result.ok) return reply.code(404).send(notFoundBody);
+    return reply.code(200).send(toApiTask(result.task));
+  });
 
   app.get('/tasks', async () => ({ tasks: listOpenTasks(store).map(toApiTask) }));
 };
