@@ -1,0 +1,804 @@
+cases:
+- id: TC-1
+  title: validation trims surrounding whitespace from the title
+  unit: U-1
+  acs:
+  - AC-7
+  kind: unit
+  preconditions:
+  - validation.ts is called directly (no HTTP)
+  steps:
+  - "Validate { title: '  Write report  ' } with no dueDate"
+  expected:
+  - Result is valid
+  - Normalised title is exactly 'Write report'
+  - Normalised dueDate is null
+- id: TC-2
+  title: validation trims tabs, newlines and Unicode whitespace at both ends
+  unit: U-1
+  acs:
+  - AC-7
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate titles '\tWrite report\n', ' Write report　' and '\r\n Write report \r\n'
+  expected:
+  - Each result is valid
+  - Each normalised title is exactly 'Write report'
+- id: TC-3
+  title: validation rejects an empty title with title_required
+  unit: U-1
+  acs:
+  - AC-3
+  kind: negative
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - "Validate { title: '' }"
+  expected:
+  - "Result is invalid with exactly one error { field: 'title', code: 'title_required', message: 'Title is required' }"
+- id: TC-4
+  title: validation rejects a whitespace-only title with title_required
+  unit: U-1
+  acs:
+  - AC-4
+  kind: negative
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate titles '   ', '\t\n ' and ' 　'
+  expected:
+  - "Each result is invalid with one error { field: 'title', code: 'title_required' }"
+- id: TC-5
+  title: validation accepts a title of exactly 200 characters and keeps it whole
+  unit: U-1
+  acs:
+  - AC-5
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate a title of 200 'a' characters
+  expected:
+  - Result is valid
+  - Normalised title equals the input and has length 200
+- id: TC-6
+  title: validation rejects a 201-character title with title_too_long
+  unit: U-1
+  acs:
+  - AC-6
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate a title of 201 'a' characters
+  expected:
+  - "Result is invalid with one error { field: 'title', code: 'title_too_long', message: 'Title can be at most 200 characters' }"
+- id: TC-7
+  title: validation applies the 200 limit after trimming
+  unit: U-1
+  acs:
+  - AC-8
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate '     ' + 200 'a' characters + '     ' (210 characters before trimming)
+  expected:
+  - Result is valid
+  - Normalised title is the 200 'a' characters
+- id: TC-8
+  title: validation counts title length in Unicode code points
+  unit: U-1
+  acs:
+  - AC-5
+  - AC-6
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate a title of 200 '😀' (each 2 UTF-16 units, string length 400)
+  - Validate a title of 201 '😀'
+  expected:
+  - '200 emoji: valid, the title is stored unchanged'
+  - "201 emoji: invalid with code 'title_too_long'"
+- id: TC-9
+  title: validation rejects due dates that are not real YYYY-MM-DD calendar dates
+  unit: U-1
+  acs:
+  - AC-9
+  kind: negative
+  preconditions:
+  - validation.ts is called directly
+  - Title is 'Write report'
+  steps:
+  - "Validate each dueDate: '2026-02-30', '2027-02-29', '2026-13-01', '2026-00-10', '2026-11-00', '2026-11-31', 'tomorrow-ish', '2026-11-15T10:00', '2026-1-5', '20261115', ' 2026-11-15', '2026-11-15 ', '15/11/2026'"
+  expected:
+  - "Each result is invalid with exactly one error { field: 'dueDate', code: 'invalid_due_date', message: 'Invalid due date' }"
+- id: TC-10
+  title: validation handles leap years correctly
+  unit: U-1
+  acs:
+  - AC-9
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - Validate dueDate '2028-02-29', '2000-02-29', '1900-02-29' and '2100-02-29'
+  expected:
+  - "'2028-02-29' and '2000-02-29' are valid and kept unchanged"
+  - "'1900-02-29' and '2100-02-29' are invalid with code 'invalid_due_date'"
+- id: TC-11
+  title: validation treats an omitted, null or empty dueDate as no due date
+  unit: U-1
+  acs:
+  - AC-9
+  kind: edge
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - "Validate { title: 'Write report' }, then { title: 'Write report', dueDate: null }, then { title: 'Write report', dueDate: '' }"
+  expected:
+  - All three are valid
+  - The normalised dueDate is null in all three
+- id: TC-12
+  title: validation returns both field errors when title and dueDate are invalid
+  unit: U-1
+  acs:
+  - AC-3
+  - AC-9
+  kind: negative
+  preconditions:
+  - validation.ts is called directly
+  steps:
+  - "Validate { title: '   ', dueDate: '2026-02-30' }"
+  expected:
+  - "Result is invalid with exactly 2 errors: one { field: 'title', code: 'title_required' } and one { field: 'dueDate', code: 'invalid_due_date' }"
+- id: TC-13
+  title: createTask with a past due date creates an open task
+  unit: U-1
+  acs:
+  - AC-10
+  kind: unit
+  preconditions:
+  - New InMemoryTaskStore and service
+  steps:
+  - "createTask({ title: 'Write report', dueDate: '2020-01-01' })"
+  expected:
+  - Returns a task with status 'open', title 'Write report' and dueDate '2020-01-01'
+  - id is a UUID v4 and createdAt is an ISO 8601 UTC timestamp
+  - listOpenTasks() contains the task
+- id: TC-14
+  title: createTask that fails validation stores nothing
+  unit: U-1
+  acs:
+  - AC-3
+  - AC-4
+  - AC-6
+  - AC-9
+  kind: negative
+  preconditions:
+  - New InMemoryTaskStore and service
+  steps:
+  - "Call createTask with title '', then title '   ', then a 201-character title, then { title: 'X', dueDate: '2026-02-30' }"
+  expected:
+  - Each call returns a validation-failure result with the matching code
+  - listOpenTasks() returns an empty array
+  - The store has no tasks of any status
+- id: TC-15
+  title: createTask with a duplicate title and due date creates separate tasks
+  unit: U-1
+  acs:
+  - AC-11
+  kind: unit
+  preconditions:
+  - New InMemoryTaskStore and service
+  steps:
+  - "createTask({ title: 'Write report', dueDate: '2026-11-15' }) twice"
+  expected:
+  - The two returned tasks have different ids
+  - Both are open
+  - listOpenTasks() returns both, in insertion order
+- id: TC-16
+  title: store assigns unique ids and a strictly increasing seq
+  unit: U-1
+  acs:
+  - AC-11
+  - AC-18
+  kind: edge
+  preconditions:
+  - New InMemoryTaskStore
+  steps:
+  - Insert 1,000 tasks with the same title and no due date
+  expected:
+  - All 1,000 ids are distinct UUID v4 strings
+  - Each seq is greater than the previous one
+  - findById returns each task by its id
+- id: TC-17
+  title: markDone sets an open task to done and removes it from the open list
+  unit: U-1
+  acs:
+  - AC-12
+  kind: unit
+  preconditions:
+  - Service with an open task 'Write report' (id A)
+  steps:
+  - markDone(A)
+  - listOpenTasks()
+  expected:
+  - markDone returns the task with status 'done'; id, title, dueDate and createdAt are unchanged
+  - listOpenTasks() doesn't contain A
+- id: TC-18
+  title: markDone on an already-done task succeeds and changes nothing
+  unit: U-1
+  acs:
+  - AC-13
+  kind: edge
+  preconditions:
+  - Service with task A already marked done
+  steps:
+  - markDone(A) a second time
+  expected:
+  - Returns a success result (not not-found and not an error)
+  - The returned task deep-equals the result of the first markDone, with status 'done'
+- id: TC-19
+  title: markDone with an unknown id returns not-found and changes no task
+  unit: U-1
+  acs:
+  - AC-14
+  kind: negative
+  preconditions:
+  - Service with open tasks A and B
+  steps:
+  - markDone with a random UUID, then with '', then with 'abc'
+  expected:
+  - Each call returns a not-found result
+  - A and B are still open and unchanged
+  - listOpenTasks() still returns [A, B]
+- id: TC-20
+  title: listOpenTasks returns every open task and no done tasks
+  unit: U-1
+  acs:
+  - AC-15
+  kind: unit
+  preconditions:
+  - Service with tasks T1..T5 created in order; T2 and T4 marked done
+  steps:
+  - listOpenTasks()
+  expected:
+  - Returns exactly T1, T3 and T5
+  - No returned task has status 'done'
+- id: TC-21
+  title: listOpenTasks sorts by due date, earliest first
+  unit: U-1
+  acs:
+  - AC-16
+  kind: unit
+  preconditions:
+  - "Service with tasks created in order: due '2026-12-01', '2026-11-01', '2026-11-15'"
+  steps:
+  - listOpenTasks()
+  expected:
+  - "dueDates in order: '2026-11-01', '2026-11-15', '2026-12-01'"
+- id: TC-22
+  title: compareOpenTasks orders correctly across month and year boundaries
+  unit: U-1
+  acs:
+  - AC-16
+  kind: edge
+  preconditions:
+  - Tasks with due dates '2027-01-01', '2026-12-31', '2026-02-01', '2025-12-31'
+  steps:
+  - Sort the tasks with compareOpenTasks
+  expected:
+  - "Order: '2025-12-31', '2026-02-01', '2026-12-31', '2027-01-01'"
+- id: TC-23
+  title: listOpenTasks puts tasks without a due date after all dated tasks
+  unit: U-1
+  acs:
+  - AC-17
+  kind: unit
+  preconditions:
+  - "Service with tasks created in order: N1 (no date), D1 ('2030-01-01'), N2 (no date), D2 ('2020-01-01')"
+  steps:
+  - listOpenTasks()
+  expected:
+  - 'Order: D2, D1, N1, N2'
+- id: TC-24
+  title: listOpenTasks breaks ties in insertion order, oldest first
+  unit: U-1
+  acs:
+  - AC-18
+  kind: unit
+  preconditions:
+  - "Service with tasks created in order: A ('2026-11-15'), X (no date), B ('2026-11-15'), Y (no date), C ('2026-11-15')"
+  steps:
+  - listOpenTasks()
+  expected:
+  - 'Order: A, B, C, X, Y'
+- id: TC-25
+  title: tie-breaking uses seq even when createdAt is identical
+  unit: U-1
+  acs:
+  - AC-18
+  kind: edge
+  preconditions:
+  - System time frozen (fake timers) so every task gets the same createdAt
+  steps:
+  - Create tasks P, Q, R with the same dueDate '2026-11-15', then S and T with no date
+  - listOpenTasks()
+  expected:
+  - All createdAt values are equal
+  - 'Order: P, Q, R, S, T'
+- id: TC-26
+  title: POST /api/tasks creates an open task without a due date
+  unit: U-2
+  acs:
+  - AC-1
+  kind: api
+  preconditions:
+  - Fresh buildApp() (empty store)
+  steps:
+  - 'POST /api/tasks with content-type application/json and body { "title": "Write report" }'
+  expected:
+  - Status 201, content-type application/json
+  - Body has exactly the keys id, title, dueDate, status and createdAt
+  - id is a UUID, title 'Write report', dueDate null, status 'open', createdAt is ISO 8601 UTC
+  - GET /api/tasks returns this task
+- id: TC-27
+  title: POST /api/tasks creates a task with exactly the given due date
+  unit: U-2
+  acs:
+  - AC-2
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "Write report", "dueDate": "2026-11-15" }'
+  expected:
+  - Status 201
+  - "Body: title 'Write report', dueDate '2026-11-15', status 'open'"
+- id: TC-28
+  title: POST /api/tasks treats a null or empty dueDate as no due date
+  unit: U-2
+  acs:
+  - AC-1
+  kind: edge
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "A", "dueDate": null }'
+  - 'POST /api/tasks { "title": "B", "dueDate": "" }'
+  expected:
+  - Both return status 201 with dueDate null
+- id: TC-29
+  title: POST /api/tasks rejects an empty title
+  unit: U-2
+  acs:
+  - AC-3
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "" }'
+  expected:
+  - Status 400
+  - "Body: { error: 'validation_failed', message: <string>, errors: [{ field: 'title', code: 'title_required', message: 'Title is required' }] }"
+  - 'GET /api/tasks returns { tasks: [] }'
+- id: TC-30
+  title: POST /api/tasks treats a missing title like an empty title
+  unit: U-2
+  acs:
+  - AC-3
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks {}
+  - 'POST /api/tasks { "dueDate": "2026-11-15" }'
+  expected:
+  - Both return status 400 with error 'validation_failed' and one error with code 'title_required'
+  - No task is created
+- id: TC-31
+  title: POST /api/tasks rejects a whitespace-only title
+  unit: U-2
+  acs:
+  - AC-4
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "   " }'
+  expected:
+  - "Status 400, error 'validation_failed', errors [{ field: 'title', code: 'title_required' }]"
+  - 'GET /api/tasks returns { tasks: [] }'
+- id: TC-32
+  title: POST /api/tasks accepts and stores a 200-character title
+  unit: U-2
+  acs:
+  - AC-5
+  kind: edge
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with a title of 200 'a' characters
+  expected:
+  - Status 201
+  - Response title equals the 200-character input
+  - GET /api/tasks shows the same 200-character title
+- id: TC-33
+  title: POST /api/tasks rejects a 201-character title
+  unit: U-2
+  acs:
+  - AC-6
+  kind: edge
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with a title of 201 'a' characters
+  expected:
+  - "Status 400, error 'validation_failed', errors [{ field: 'title', code: 'title_too_long', message: 'Title can be at most 200 characters' }]"
+  - No task is created
+- id: TC-34
+  title: POST /api/tasks trims the title before storing it
+  unit: U-2
+  acs:
+  - AC-7
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "  Write report  " }'
+  expected:
+  - Status 201 with title 'Write report'
+  - GET /api/tasks shows title 'Write report'
+- id: TC-35
+  title: POST /api/tasks accepts a title that is 200 characters only after trimming
+  unit: U-2
+  acs:
+  - AC-8
+  kind: edge
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with title '     ' + 200 'a' characters + '     '
+  expected:
+  - Status 201
+  - The response title has length 200 and no surrounding spaces
+- id: TC-36
+  title: POST /api/tasks rejects invalid due dates
+  unit: U-2
+  acs:
+  - AC-9
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - "POST /api/tasks { title: 'Write report', dueDate: v } for each v in '2026-02-30', '2027-02-29', '2026-13-01', 'tomorrow-ish', '2026-11-15T10:00'"
+  expected:
+  - "Each returns status 400, error 'validation_failed', errors [{ field: 'dueDate', code: 'invalid_due_date', message: 'Invalid due date' }]"
+  - 'GET /api/tasks returns { tasks: [] }'
+- id: TC-37
+  title: POST /api/tasks returns both field errors in one response
+  unit: U-2
+  acs:
+  - AC-3
+  - AC-9
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "", "dueDate": "2026-02-30" }'
+  expected:
+  - Status 400, error 'validation_failed'
+  - "errors has exactly 2 entries: field 'title' with code 'title_required', and field 'dueDate' with code 'invalid_due_date'"
+  - No task is created
+- id: TC-38
+  title: POST /api/tasks accepts a due date in the past
+  unit: U-2
+  acs:
+  - AC-10
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "Old task", "dueDate": "2020-01-01" }'
+  expected:
+  - Status 201 with dueDate '2020-01-01' and status 'open'
+- id: TC-39
+  title: POST /api/tasks with a duplicate title and due date creates two tasks
+  unit: U-2
+  acs:
+  - AC-11
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "Write report", "dueDate": "2026-11-15" } twice'
+  expected:
+  - Both return status 201 with different ids
+  - GET /api/tasks returns both tasks
+- id: TC-40
+  title: POST /api/tasks rejects wrongly shaped bodies with invalid_request
+  unit: U-2
+  acs:
+  - AC-3
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks with each of: { "title": 123 }, { "title": null }, { "title": "A", "dueDate": 20261115 }, ["Write report"], "Write report", { "title": "A", "priority": 1 }'
+  expected:
+  - "Each returns status 400 with a body of exactly { error: 'invalid_request', message: <string> }"
+  - 'GET /api/tasks returns { tasks: [] }'
+- id: TC-41
+  title: POST /api/tasks rejects malformed or empty JSON with invalid_request
+  unit: U-2
+  acs:
+  - AC-3
+  kind: negative
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with content-type application/json and payload '{"title":'
+  - POST /api/tasks with content-type application/json and an empty payload
+  expected:
+  - "Both return status 400 with body { error: 'invalid_request', message: <string> }"
+  - No task is created
+- id: TC-42
+  title: POST /api/tasks doesn't let clients set id, status or createdAt
+  unit: U-2
+  acs:
+  - AC-1
+  kind: security
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "A", "status": "done" }'
+  - 'POST /api/tasks { "title": "A", "id": "11111111-1111-4111-8111-111111111111" }'
+  - 'POST /api/tasks { "title": "A", "createdAt": "2000-01-01T00:00:00.000Z" }'
+  expected:
+  - Each returns status 400 with error 'invalid_request'
+  - No task is created
+- id: TC-43
+  title: POST /api/tasks rejects non-JSON content types with 415
+  unit: U-2
+  acs:
+  - AC-3
+  kind: security
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with content-type text/plain and payload 'Write report'
+  - POST /api/tasks with content-type application/x-www-form-urlencoded and payload 'title=Write+report'
+  expected:
+  - "Both return status 415 with body exactly { error: 'invalid_request', message: <string> }"
+  - No task is created
+- id: TC-44
+  title: POST /api/tasks rejects titles over the schema maximum cheaply
+  unit: U-2
+  acs:
+  - AC-6
+  kind: security
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with a title of 10,001 'a' characters
+  - POST /api/tasks with a title of 10,000 'a' characters
+  expected:
+  - "10,001 characters: status 400 with error 'invalid_request'"
+  - "10,000 characters: status 400 with error 'validation_failed' and code 'title_too_long'"
+  - No task is created
+- id: TC-45
+  title: POST /api/tasks rejects bodies larger than 16 KiB
+  unit: U-2
+  acs:
+  - AC-6
+  kind: security
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - POST /api/tasks with a valid JSON body of about 20 KiB (e.g. a title of 10,000 'é' characters)
+  expected:
+  - Status 413
+  - The body is JSON with no stack trace or internal details
+  - No task is created
+- id: TC-46
+  title: POST /api/tasks stores HTML-like and multi-line titles verbatim
+  unit: U-2
+  acs:
+  - AC-7
+  kind: security
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - 'POST /api/tasks { "title": "<script>alert(1)</script>" }'
+  - 'POST /api/tasks { "title": "Line 1\nLine 2" }'
+  expected:
+  - Both return status 201 with content-type application/json
+  - The titles are returned unchanged and unescaped ('<script>alert(1)</script>', and 'Line 1\nLine 2' with the inner newline kept)
+- id: TC-47
+  title: POST /api/tasks returns the contract 500 body when the store fails
+  unit: U-2
+  acs:
+  - AC-1
+  kind: negative
+  preconditions:
+  - buildApp({ store }) where store.insert throws Error('db exploded')
+  steps:
+  - 'POST /api/tasks { "title": "Write report" }'
+  expected:
+  - "Status 500 with body exactly { error: 'internal_error', message: 'Something went wrong' }"
+  - The body doesn't contain 'db exploded' or a stack trace
+- id: TC-48
+  title: POST /api/tasks responds within the latency target with 1,000 open tasks
+  unit: U-2
+  acs:
+  - AC-1
+  kind: performance
+  preconditions:
+  - buildApp() with 1,000 open tasks seeded through POST /api/tasks
+  steps:
+  - Send 200 sequential POST /api/tasks requests with valid bodies and measure each server-side duration
+  expected:
+  - All requests return status 201
+  - p95 latency is under 20 ms
+- id: TC-49
+  title: GET /api/tasks returns an empty list when there are no tasks
+  unit: U-3
+  acs:
+  - AC-15
+  kind: edge
+  preconditions:
+  - Fresh buildApp()
+  steps:
+  - GET /api/tasks
+  expected:
+  - Status 200, content-type application/json
+  - 'Body is exactly { tasks: [] }'
+- id: TC-50
+  title: GET /api/tasks lists added tasks, including duplicates, in the Task shape
+  unit: U-3
+  acs:
+  - AC-1
+  - AC-11
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  - "POST /api/tasks { title: 'Write report' } twice, saving both 201 bodies"
+  steps:
+  - GET /api/tasks
+  expected:
+  - Status 200; tasks has 2 items that deep-equal the two 201 bodies, in insertion order
+  - Each item has exactly the keys id, title, dueDate, status and createdAt (no seq), with status 'open'
+- id: TC-51
+  title: GET /api/tasks excludes done tasks
+  unit: U-3
+  acs:
+  - AC-15
+  kind: api
+  preconditions:
+  - buildApp({ store }) with an InMemoryTaskStore holding open tasks A and C and task B set to done via store.setStatus
+  steps:
+  - GET /api/tasks
+  expected:
+  - Status 200; tasks contains exactly A and C
+  - No item has status 'done'
+- id: TC-52
+  title: GET /api/tasks sorts by due date, puts undated tasks last, and breaks ties oldest first
+  unit: U-3
+  acs:
+  - AC-16
+  - AC-17
+  - AC-18
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  - "Tasks added through POST in this order: 'N1' (no date), 'D-dec' ('2026-12-01'), 'D-nov1' ('2026-11-01'), 'N2' (no date), 'D-nov15a' ('2026-11-15'), 'D-nov15b' ('2026-11-15')"
+  steps:
+  - GET /api/tasks
+  expected:
+  - "Status 200; titles in order: 'D-nov1', 'D-nov15a', 'D-nov15b', 'D-dec', 'N1', 'N2'"
+- id: TC-53
+  title: GET /api/tasks ignores query parameters and doesn't share stores between apps
+  unit: U-3
+  acs:
+  - AC-15
+  kind: edge
+  preconditions:
+  - App 1 from buildApp() with 1 open task and 1 done task
+  - App 2 from a separate buildApp() with no tasks
+  steps:
+  - GET /api/tasks?status=done on app 1
+  - GET /api/tasks on app 2
+  expected:
+  - App 1 returns status 200 with only the open task
+  - 'App 2 returns status 200 with { tasks: [] }'
+- id: TC-54
+  title: GET /api/tasks responds within the latency target with 1,000 open tasks
+  unit: U-3
+  acs:
+  - AC-15
+  - AC-16
+  kind: performance
+  preconditions:
+  - 'buildApp({ store }) with 10,000 tasks: 1,000 open (mixed and null due dates) and 9,000 done'
+  steps:
+  - Send 100 sequential GET /api/tasks requests and measure each server-side duration
+  expected:
+  - Each response has status 200 with exactly 1,000 tasks in sort order
+  - p95 latency is under 50 ms
+- id: TC-55
+  title: POST /api/tasks/{id}/done marks an open task done and removes it from the list
+  unit: U-4
+  acs:
+  - AC-12
+  - AC-15
+  kind: api
+  preconditions:
+  - Fresh buildApp()
+  - "Tasks added: A ('2026-11-01'), B ('2026-11-15'), C ('2026-12-01')"
+  steps:
+  - POST /api/tasks/{B.id}/done with no body
+  - GET /api/tasks
+  expected:
+  - Status 200; body is B with status 'done' and id, title, dueDate and createdAt unchanged
+  - GET returns [A, C] in that order
+- id: TC-56
+  title: POST /api/tasks/{id}/done on an already-done task returns 200 unchanged
+  unit: U-4
+  acs:
+  - AC-13
+  kind: edge
+  preconditions:
+  - Fresh buildApp() with task A already marked done via the API
+  steps:
+  - POST /api/tasks/{A.id}/done again
+  - Send two POST /api/tasks/{B.id}/done for a new open task B at the same time (Promise.all)
+  expected:
+  - A's repeated call returns status 200 with a body deep-equal to the first done response
+  - Both concurrent calls for B return status 200 with status 'done'
+  - GET /api/tasks contains neither A nor B
+- id: TC-57
+  title: POST /api/tasks/{id}/done returns 404 for an unknown id and changes nothing
+  unit: U-4
+  acs:
+  - AC-14
+  kind: negative
+  preconditions:
+  - Fresh buildApp() with open tasks A and B
+  steps:
+  - POST /api/tasks/3f1c2b9e-8d4a-4c1e-9b7a-2a6f0d1e5c33/done (a well-formed UUID that doesn't exist)
+  - GET /api/tasks
+  expected:
+  - "Status 404 with body exactly { error: 'not_found', message: 'task not found' }"
+  - GET still returns [A, B], both open
+- id: TC-58
+  title: POST /api/tasks/{id}/done returns 404 for malformed, forged and over-long ids
+  unit: U-4
+  acs:
+  - AC-14
+  kind: security
+  preconditions:
+  - Fresh buildApp() with open task A
+  steps:
+  - "POST done with each id: 'abc', 'not-a-uuid', URL-encoded \"1' OR '1'='1\", URL-encoded '../tasks', A.id in upper case, A.id with one character changed, and a 65-character string"
+  expected:
+  - "Each returns status 404 with body exactly { error: 'not_found', message: 'task not found' }"
+  - The body never contains other task data
+  - Task A is still open in GET /api/tasks
+- id: TC-59
+  title: POST /api/tasks/{id}/done responds within the latency target with 1,000 open tasks
+  unit: U-4
+  acs:
+  - AC-12
+  kind: performance
+  preconditions:
+  - buildApp() with 1,000 open tasks seeded
+  steps:
+  - Mark 200 of them done one by one and measure each server-side duration
+  expected:
+  - All requests return status 200 with status 'done'
+  - p95 latency is under 20 ms
+  - GET /api/tasks then returns 800 tasks
