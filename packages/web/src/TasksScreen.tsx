@@ -33,12 +33,12 @@ export function TasksScreen() {
       <h2>Open tasks</h2>
       {state.status === 'loading' && <p role="status">Loading tasks…</p>}
       {state.status === 'error' && (
-        <div role="alert">
-          <p>Could not load tasks.</p>
+        <>
+          <p role="alert">Could not load tasks.</p>
           <button type="button" onClick={retry}>
             Try again
           </button>
-        </div>
+        </>
       )}
       {state.status === 'loaded' && state.tasks.length === 0 && <p>No open tasks</p>}
       {state.status === 'loaded' && state.tasks.length > 0 && <OpenTaskList tasks={state.tasks} />}

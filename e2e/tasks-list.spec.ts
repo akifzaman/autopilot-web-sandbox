@@ -46,11 +46,52 @@ test('AC-16 AC-17 AC-18 orders by due date, then undated, ties oldest first', as
   expect(seen).toEqual(['D1101', 'D1115a', 'D1115b', 'D1201', 'N1', 'N2']);
 });
 
-test('AC-19 shows the empty state', async ({ page }) => {
+test('TC-UI-2 AC-19 empty state shows No open tasks without a list or table', async ({ page }) => {
   await page.route('**/api/tasks', (route) => route.fulfill({ json: { tasks: [] } }));
   await page.goto('/');
-  await expect(page.getByText('No open tasks')).toBeVisible();
+  await expect(page.getByText('No open tasks', { exact: true })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Open tasks' })).toHaveCount(0);
+  await expect(page.locator('table')).toHaveCount(0);
+  await expect(page.getByRole('status')).toHaveCount(0);
+  await expect(page.getByText('Loading tasks…')).toHaveCount(0);
+});
+
+const task = (title: string, dueDate: string | null, n: number) => ({
+  id: `id-${title}`,
+  title,
+  dueDate,
+  status: 'open',
+  createdAt: `2026-10-01T10:00:0${n}.000Z`,
+});
+
+test('TC-UI-9 list shows rows in the server order: dated by date, same date and undated oldest first', async ({
+  page,
+}) => {
+  const tasks = [
+    task('A', '2026-11-01', 1),
+    task('B', '2026-11-15', 2),
+    task('C', '2026-11-15', 3),
+    task('D', '2026-12-01', 4),
+    task('E', null, 5),
+    task('F', null, 6),
+  ];
+  await page.route('**/api/tasks', (route) => route.fulfill({ json: { tasks } }));
+  await page.goto('/');
+  const rows = page.getByRole('list', { name: 'Open tasks' }).getByRole('listitem');
+  await expect(rows).toHaveText(['A Due 2026-11-01', 'B Due 2026-11-15', 'C Due 2026-11-15', 'D Due 2026-12-01', 'E', 'F']);
+  await expect(rows.nth(4)).not.toContainText('Due');
+  await expect(rows.nth(5)).not.toContainText('Due');
+});
+
+test('TC-UI-9 page does not reorder rows itself', async ({ page }) => {
+  const tasks = [task('D', '2026-12-01', 1), task('A', '2026-11-01', 2), task('F', null, 3)];
+  await page.route('**/api/tasks', (route) => route.fulfill({ json: { tasks } }));
+  await page.goto('/');
+  await expect(page.getByRole('list', { name: 'Open tasks' }).getByRole('listitem')).toHaveText([
+    'D Due 2026-12-01',
+    'A Due 2026-11-01',
+    'F',
+  ]);
 });
 
 test('shows a load error and recovers with Try again', async ({ page }) => {
