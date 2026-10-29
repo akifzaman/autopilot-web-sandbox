@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: autopilot-web-sandbox API
+  version: 0.1.0
+  description: |
+    API for the shared team task list. All routes live under /api.
+    v1 has no authentication: one shared team list (business spec assumption, pending Q-1).
+servers:
+  - url: /api
+tags:
+  - name: health
+  - name: tasks
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness check
+      responses:
+        '200':
+          description: The API is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+  /tasks:
+    get:
+      tags: [tasks]
+      operationId: listOpenTasks
+      summary: List the team's open tasks
+      description: |
+        Returns every task with status 'open' and no done tasks (AC-15).
+        Sorted by dueDate ascending (AC-16); tasks without a dueDate come after all tasks with one (AC-17);
+        ties (same dueDate, or no dueDate) are ordered by when they were added, oldest first (AC-18).
+        An empty list is returned as `tasks: []`.
+      responses:
+        '200':
+          description: The open tasks in display order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskList'
+              example:
+                tasks:
+                  - id: 3f1c2b9e-8d4a-4c1e-9b7a-2a6f0d1e5c33
+                    title: Write report
+                    dueDate: '2026-11-15'
+                    status: open
+                    createdAt: '2026-10-28T09:12:44.120Z'
+                  - id: 9a0e7d52-1b3c-4f6a-8e2d-7c5b4a3f2e11
+                    title: Book venue
+                    dueDate: null
+                    status: open
+                    createdAt: '2026-10-28T09:13:02.981Z'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [tasks]
+      operationId: createTask
+      summary: Add a task
+      description: |
+        Trims the title, then validates it (required, at most 200 Unicode characters after trimming) and the
+        optional dueDate (a real calendar date, YYYY-MM-DD; past dates allowed). On success the task is stored
+        as open. On validation failure nothing is stored and all field errors are returned.
+        Duplicate titles (and duplicate title + dueDate) are allowed and create separate tasks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              noDueDate:
+                value:
+                  title: Write report
+              withDueDate:
+                value:
+                  title: Write report
+                  dueDate: '2026-11-15'
+      responses:
+        '201':
+          description: The task was created (status is always 'open').
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 3f1c2b9e-8d4a-4c1e-9b7a-2a6f0d1e5c33
+                title: Write report
+                dueDate: '2026-11-15'
+                status: open
+                createdAt: '2026-10-28T09:12:44.120Z'
+        '400':
+          description: |
+            The request was rejected and no task was created. Either a business validation failed
+            (`error: validation_failed`, with one or more entries in `errors`), or the body has the wrong shape
+            (`error: invalid_request`, for example the body isn't an object, a field has the wrong type, or there is an unknown property).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/InvalidRequestError'
+              examples:
+                titleRequired:
+                  value:
+                    error: validation_failed
+                    message: The task could not be created.
+                    errors:
+                      - field: title
+                        code: title_required
+                        message: Title is required
+                titleTooLong:
+                  value:
+                    error: validation_failed
+                    message: The task could not be created.
+                    errors:
+                      - field: title
+                        code: title_too_long
+                        message: Title can be at most 200 characters
+                invalidDueDate:
+                  value:
+                    error: validation_failed
+                    message: The task could not be created.
+                    errors:
+                      - field: dueDate
+                        code: invalid_due_date
+                        message: Invalid due date
+                invalidRequest:
+                  value:
+                    error: invalid_request
+                    message: body/title must be string
+        '415':
+          description: The content type isn't application/json.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidRequestError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /tasks/{id}/done:
+    post:
+      tags: [tasks]
+      operationId: markTaskDone
+      summary: Mark a task done
+      description: |
+        Sets the task's status to 'done'. Idempotent: marking a task that is already done succeeds and changes
+        nothing (AC-13). Any member can mark any task done. An unknown, malformed or forged id returns 404 and
+        changes no task (AC-14). No request body.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The task, now (or already) done.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 3f1c2b9e-8d4a-4c1e-9b7a-2a6f0d1e5c33
+                title: Write report
+                dueDate: '2026-11-15'
+                status: done
+                createdAt: '2026-10-28T09:12:44.120Z'
+        '404':
+          description: No task with this id exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+              example:
+                error: not_found
+                message: task not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      description: Task id as returned by the API. Any other value results in 404.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+  schemas:
+    Task:
+      type: object
+      additionalProperties: false
+      required: [id, title, dueDate, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-assigned, unique, never reused.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Trimmed plain text; length counted in Unicode characters (code points).
+        dueDate:
+          type: ['string', 'null']
+          format: date
+          description: Calendar date YYYY-MM-DD, or null when the task has no due date.
+        status:
+          type: string
+          enum: [open, done]
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the task was added.
+    TaskList:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    CreateTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          maxLength: 10000
+          description: |
+            Raw title; trimmed by the server before validation. After trimming it must be 1-200 Unicode
+            characters, or the request fails with title_required or title_too_long.
+        dueDate:
+          type: ['string', 'null']
+          description: |
+            Optional calendar date YYYY-MM-DD. Omitted, null or empty string means no due date. Any other value
+            that isn't a real calendar date (e.g. 2026-02-30, 2027-02-29, 2026-13-01, 'tomorrow-ish',
+            2026-11-15T10:00) fails with invalid_due_date. Past dates are accepted.
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+          enum: [title, dueDate]
+        code:
+          type: string
+          enum: [title_required, title_too_long, invalid_due_date]
+        message:
+          type: string
+          description: Human-readable message shown to the member.
+    ValidationError:
+      type: object
+      additionalProperties: false
+      required: [error, message, errors]
+      properties:
+        error:
+          type: string
+          const: validation_failed
+        message:
+          type: string
+        errors:
+          type: array
+          minItems: 1
+          maxItems: 2
+          description: At most one error per field.
+          items:
+            $ref: '#/components/schemas/FieldError'
+    InvalidRequestError:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          const: invalid_request
+        message:
+          type: string
+    NotFoundError:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          const: not_found
+        message:
+          type: string
+          const: task not found
+    InternalError:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          const: internal_error
+        message:
+          type: string
+  responses:
+    InternalError:
+      description: Unexpected server error; details are only logged server-side.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalError'

@@ -1,0 +1,113 @@
+stack: TypeScript (strict), Node.js, Fastify 5 API with @fastify/static, React 19 + Vite front-end, Vitest (API via app.inject, web via Testing Library/jsdom), Playwright E2E; in-memory task store behind a TaskStore interface; no new runtime dependencies.
+units:
+- id: U-1
+  title: 'Task domain: validation, sorting and in-memory store'
+  track: backend
+  description: "Add `packages/api/src/tasks/`:\n- `validation.ts`: trim the title, then return `title_required` if it is empty or `title_too_long` if it is over 200 code points. Check `dueDate` with a strict `^\\d{4}-\\d{2}-\\d{2}$` regex plus a `Date.UTC` round-trip (leap years included) and return `invalid_due_date` if it fails. Omitted, null or '' means no date. All field errors are collected.\n- `store.ts`: `TaskStore` interface and `InMemoryTaskStore` (Map, `crypto.randomUUID()`, `createdAt`, monotonic `seq`).\n- `service.ts`: `createTask`, `listOpenTasks` (filter open, then sort with `compareOpenTasks`: dueDate ascending, null last, seq ascending), `markDone` (idempotent, not-found result).\nUnit tests with Vitest, no HTTP."
+  acs:
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  - AC-11
+  - AC-12
+  - AC-13
+  - AC-14
+  - AC-15
+  - AC-16
+  - AC-17
+  - AC-18
+  depends_on: []
+- id: U-2
+  title: 'API: POST /api/tasks (add a task)'
+  track: backend
+  description: 'Register `routes/tasks.ts` under `/api` in `buildApp()`. Add a `store?: TaskStore` option to `AppOptions` (default: new InMemoryTaskStore per app) and set `bodyLimit` to 16 KiB. Implement `POST /api/tasks` exactly as in openapi.yaml: a JSON schema for `CreateTaskRequest` (additionalProperties false). Schema failures return `400 invalid_request`. Business validation failures return `400 validation_failed` with `errors[]`. Success returns `201 Task`. Add a custom Fastify error handler so all 400/415/500 bodies match the contract. API tests use `app.inject`.'
+  acs:
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  - AC-11
+  depends_on:
+  - U-1
+- id: U-3
+  title: 'API: GET /api/tasks (list open tasks)'
+  track: backend
+  description: 'Implement `GET /api/tasks`, returning `200 { tasks: Task[] }` with only open tasks, in service sort order, and `tasks: []` when there are none. The response matches the `TaskList` schema (internal `seq` not exposed). API tests use `app.inject` and seed tasks through `POST /api/tasks`.'
+  acs:
+  - AC-1
+  - AC-11
+  - AC-15
+  - AC-16
+  - AC-17
+  - AC-18
+  depends_on:
+  - U-1
+  - U-2
+- id: U-4
+  title: 'API: POST /api/tasks/{id}/done (mark done)'
+  track: backend
+  description: "Implement `POST /api/tasks/{id}/done` (no body; `id` maxLength 64). Returns `200 Task` with status 'done' for an open task and also for an already-done one (no change). An unknown, malformed or forged id returns `404 { error: 'not_found', message: 'task not found' }`, and no task changes. API tests use `app.inject`, including that the task no longer appears in `GET /api/tasks`."
+  acs:
+  - AC-12
+  - AC-13
+  - AC-14
+  - AC-15
+  depends_on:
+  - U-1
+  - U-3
+- id: U-5
+  title: 'Tasks screen: open-tasks list with empty state'
+  track: frontend
+  description: "Replace the scaffold content of `App` with `TasksScreen`, following the approved design in `docs/design/tasks/`. Add the typed API client `packages/web/src/api/tasks.ts`. On load, call **GET /api/tasks** and render `OpenTaskList` in server order: title as a plain text node and the due date, or nothing when there is none. When the list is empty, show the 'No open tasks' message instead of a list or table. Show loading and load-error states. Component tests next to the components, and Playwright E2E. Update `e2e/smoke.spec.ts` if the scaffold heading or API-status line changes (see questions)."
+  acs:
+  - AC-1
+  - AC-15
+  - AC-16
+  - AC-17
+  - AC-18
+  - AC-19
+  depends_on:
+  - U-3
+- id: U-6
+  title: Add-task form
+  track: frontend
+  description: "`AddTaskForm` on the Tasks screen, following `docs/design/tasks/`: title text input, optional `<input type=\"date\">` and a submit button. It calls **POST /api/tasks** with `{ title, dueDate? }`, omitting dueDate when empty. On 201 it clears the inputs and re-fetches **GET /api/tasks**, so the task appears in its sorted position. On 400 `validation_failed` it shows each `errors[].message` next to its field (`title` / `dueDate`) and keeps the entered values. Nothing is added to the list. The client doesn't duplicate validation rules; the server is the source of truth. Component tests (with the API mocked) and E2E."
+  acs:
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  - AC-11
+  depends_on:
+  - U-2
+  - U-5
+- id: U-7
+  title: Mark task done from the list
+  track: frontend
+  description: A Mark done button on each `OpenTaskList` row, with the task title in its accessible name. It calls **POST /api/tasks/{id}/done**. On 200, it removes the task from the local list without re-sorting, so the remaining order is unchanged. On 404 (a stale task already gone), it removes the row and shows a short 'Task not found' notice. The button is disabled while its request is in flight, to avoid double submits. If the list becomes empty, the 'No open tasks' state appears. Component tests and E2E.
+  acs:
+  - AC-12
+  - AC-13
+  - AC-14
+  - AC-15
+  - AC-19
+  depends_on:
+  - U-4
+  - U-5
