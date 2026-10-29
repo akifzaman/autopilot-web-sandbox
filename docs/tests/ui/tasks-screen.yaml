@@ -1,0 +1,251 @@
+cases:
+- id: TC-UI-1
+  title: "loading state shows 'Loading tasks…' while the form stays usable"
+  acs:
+  - AC-19
+  - AC-15
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks is stubbed to respond after a delay with one open task 'Write report'"
+  steps:
+  - "Open the Tasks page"
+  - "Before the GET responds, look at the page"
+  - "Type 'Draft' into the textbox 'Title' (form 'Add task')"
+  - "Wait for the GET to respond"
+  expected:
+  - "The heading level 1 'Tasks' is visible"
+  - "The status 'Loading tasks…' is visible and the list 'Open tasks' is not present"
+  - "The textbox 'Title', the date input 'Due date (optional)' and the button 'Add task' are enabled, and 'Draft' stays typed in 'Title'"
+  - "After the response the status 'Loading tasks…' is gone and the list 'Open tasks' shows one row with 'Write report'"
+- id: TC-UI-2
+  title: "empty state shows 'No open tasks' without a list or table"
+  acs:
+  - AC-19
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks is stubbed to return []"
+  steps:
+  - "Open the Tasks page"
+  expected:
+  - "The paragraph 'No open tasks' is visible"
+  - "The list 'Open tasks' is not present and there is no table on the page"
+  - "The status 'Loading tasks…' is gone"
+- id: TC-UI-3
+  title: "adding a task without a due date lists it with no due text"
+  acs:
+  - AC-1
+  - AC-15
+  preconditions:
+  - "Preconditions use a unique suffix in titles (e.g. 'Write report <suffix>') because the e2e server shares one in-memory store across parallel tests"
+  - "Real API"
+  steps:
+  - "Open the Tasks page"
+  - "Type 'Write report <suffix>' into the textbox 'Title'"
+  - "Leave 'Due date (optional)' empty"
+  - "Press the button 'Add task'"
+  expected:
+  - "In the list 'Open tasks' a row shows the text 'Write report <suffix>'"
+  - "That row has no 'Due' text"
+  - "The textbox 'Title' and 'Due date (optional)' are cleared"
+  - "No field error is shown"
+- id: TC-UI-4
+  title: "adding a task with due date 2026-11-15 shows 'Due 2026-11-15'"
+  acs:
+  - AC-2
+  preconditions:
+  - "Preconditions use a unique suffix in titles (e.g. 'Write report <suffix>') because the e2e server shares one in-memory store across parallel tests"
+  - "Real API"
+  steps:
+  - "Open the Tasks page"
+  - "Type 'Write report <suffix>' into the textbox 'Title'"
+  - "Fill 'Due date (optional)' with 2026-11-15"
+  - "Press the button 'Add task'"
+  expected:
+  - "In the list 'Open tasks' the row 'Write report <suffix>' shows 'Due 2026-11-15'"
+  - "The text 'Invalid due date' does not appear anywhere on the page"
+  - "The inputs are cleared"
+- id: TC-UI-5
+  title: "empty title shows 'Title is required' under Title and keeps the input"
+  acs:
+  - AC-3
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns one task 'Existing'; POST is not stubbed, the real API validates (or stubbed to 400 title_required for 'Title' with message 'Title is required')"
+  - "Count the POST /api/tasks calls that return 201"
+  steps:
+  - "Open the Tasks page"
+  - "Leave the textbox 'Title' empty and fill 'Due date (optional)' with 2026-11-15"
+  - "Press the button 'Add task'"
+  expected:
+  - "The text 'Title is required' is shown directly below the textbox 'Title'"
+  - "The textbox 'Title' has aria-invalid='true' and aria-describedby pointing to the error"
+  - "'Due date (optional)' still holds 2026-11-15"
+  - "The list 'Open tasks' still has only the row 'Existing' and no 201 response happened"
+- id: TC-UI-6
+  title: "whitespace-only title shows 'Title is required' and keeps the input"
+  acs:
+  - AC-4
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns one task 'Existing'"
+  steps:
+  - "Open the Tasks page"
+  - "Type '   ' (three spaces) into the textbox 'Title'"
+  - "Press the button 'Add task'"
+  expected:
+  - "The text 'Title is required' is shown directly below the textbox 'Title'"
+  - "The textbox 'Title' has aria-invalid='true' and still holds the three spaces"
+  - "The list 'Open tasks' still has only the row 'Existing'"
+- id: TC-UI-7
+  title: "201-character title shows 'Title can be at most 200 characters' and keeps the input"
+  acs:
+  - AC-6
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns one task 'Existing'"
+  steps:
+  - "Open the Tasks page"
+  - "Type 201 times 'a' into the textbox 'Title'"
+  - "Press the button 'Add task'"
+  expected:
+  - "The text 'Title can be at most 200 characters' is shown directly below the textbox 'Title'"
+  - "The textbox 'Title' has aria-invalid='true' and still holds the 201 characters"
+  - "The list 'Open tasks' still has only the row 'Existing'"
+- id: TC-UI-8
+  title: "invalid due date message shows under 'Due date (optional)' and keeps the input"
+  acs:
+  - AC-9
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "A date input cannot hold 2026-02-30 and the client never validates dates, so POST /api/tasks is stubbed to return 400 {error:'validation_failed', errors:[{field:'dueDate', code:'invalid_due_date', message:'Invalid due date'}]}"
+  - "GET /api/tasks returns one task 'Existing'"
+  steps:
+  - "Open the Tasks page"
+  - "Type 'Write report' into the textbox 'Title'"
+  - "Fill 'Due date (optional)' with 2026-11-15"
+  - "Press the button 'Add task'"
+  expected:
+  - "The text 'Invalid due date' is shown directly below 'Due date (optional)', not below 'Title'"
+  - "'Due date (optional)' has aria-invalid='true' and aria-describedby pointing to the error"
+  - "'Title' still holds 'Write report' and the date input still holds 2026-11-15"
+  - "The textbox 'Title' has no error"
+  - "The list 'Open tasks' still has only the row 'Existing'"
+- id: TC-UI-9
+  title: "list shows rows in the server order: dated by date, same date and undated oldest first"
+  acs:
+  - AC-16
+  - AC-17
+  - AC-18
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns in this order: 'A' due 2026-11-01, 'B' due 2026-11-15, 'C' due 2026-11-15, 'D' due 2026-12-01, 'E' no date, 'F' no date"
+  steps:
+  - "Open the Tasks page"
+  - "Read the rows of the list 'Open tasks' top to bottom"
+  expected:
+  - "The rows are A (Due 2026-11-01), B (Due 2026-11-15), C (Due 2026-11-15), D (Due 2026-12-01), E, F in exactly this order"
+  - "Rows E and F have no 'Due' text"
+  - "The page does not reorder the rows itself"
+- id: TC-UI-10
+  title: "a task is placed in sorted position after each add"
+  acs:
+  - AC-16
+  - AC-17
+  - AC-18
+  preconditions:
+  - "Preconditions use a unique suffix in titles (e.g. 'Write report <suffix>') because the e2e server shares one in-memory store across parallel tests"
+  - "Real API; only rows whose title carries the unique suffix are compared, their relative order is checked"
+  steps:
+  - "Open the Tasks page"
+  - "Add 'T1 <suffix>' with due date 2026-12-01"
+  - "Add 'T2 <suffix>' with due date 2026-11-01"
+  - "Add 'T3 <suffix>' with due date 2026-11-15"
+  - "Add 'T4 <suffix>' with no due date"
+  - "Add 'T5 <suffix>' with due date 2026-11-15"
+  expected:
+  - "After the first add the list has T1"
+  - "After the second add T2 is listed before T1"
+  - "After the third add the order is T2, T3, T1"
+  - "After the fourth add T4 is listed after T1"
+  - "After the fifth add the order is T2, T3, T5, T1, T4 (same date: oldest first)"
+- id: TC-UI-11
+  title: "open-tasks list shows only open tasks and a done task does not return after reload"
+  acs:
+  - AC-15
+  - AC-12
+  preconditions:
+  - "Preconditions use a unique suffix in titles (e.g. 'Write report <suffix>') because the e2e server shares one in-memory store across parallel tests"
+  - "Real API"
+  steps:
+  - "Open the Tasks page"
+  - "Add 'Keep <suffix>' and 'Finish <suffix>'"
+  - "Press the button 'Mark done: Finish <suffix>'"
+  - "Reload the page"
+  expected:
+  - "After reload the list 'Open tasks' shows the row 'Keep <suffix>'"
+  - "The row 'Finish <suffix>' is not in the list"
+- id: TC-UI-12
+  title: "Mark done disables the button, removes the row and keeps the order of the others"
+  acs:
+  - AC-12
+  - AC-16
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns 'A' due 2026-11-01, 'B' due 2026-11-15, 'C' no date; the first call returns all three, later calls return B and C only after the done call"
+  - "POST /api/tasks/{id}/done for B is stubbed to respond 200 after a short delay"
+  steps:
+  - "Open the Tasks page"
+  - "Press the button 'Mark done: B'"
+  - "Immediately look at that button"
+  - "Wait for the response"
+  expected:
+  - "While pending the button 'Mark done: B' is disabled"
+  - "After the response the row 'B' is gone from the list 'Open tasks'"
+  - "The remaining rows are A, C in that order"
+  - "No notice is shown"
+- id: TC-UI-13
+  title: "marking a stale task done shows 'Task not found' and removes the row"
+  acs:
+  - AC-14
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns 'A' and 'B'; POST /api/tasks/{id}/done for A is stubbed to return 404 {error:'not_found'}"
+  steps:
+  - "Open the Tasks page"
+  - "Press the button 'Mark done: A'"
+  expected:
+  - "The status 'Task not found' is visible"
+  - "The row 'A' is removed from the list 'Open tasks'"
+  - "The row 'B' is still listed"
+- id: TC-UI-14
+  title: "marking the last open task done shows 'No open tasks'"
+  acs:
+  - AC-19
+  - AC-12
+  preconditions:
+  - "GET /api/tasks and other calls are stubbed with page.route so the list content is exact"
+  - "GET /api/tasks returns one task 'Only'; after the done call it returns []"
+  steps:
+  - "Open the Tasks page"
+  - "Press the button 'Mark done: Only'"
+  expected:
+  - "The row 'Only' is removed"
+  - "The paragraph 'No open tasks' is visible"
+  - "The list 'Open tasks' is not present and there is no table"
+- id: TC-UI-15
+  title: "titles are rendered as text and never as HTML"
+  acs:
+  - AC-1
+  preconditions:
+  - "Preconditions use a unique suffix in titles (e.g. 'Write report <suffix>') because the e2e server shares one in-memory store across parallel tests"
+  - "Real API"
+  - "Listen for page dialogs"
+  steps:
+  - "Open the Tasks page"
+  - "Type '<img src=x onerror=alert(1)> <suffix>' into the textbox 'Title'"
+  - "Press the button 'Add task'"
+  expected:
+  - "A row in the list 'Open tasks' shows the literal text '<img src=x onerror=alert(1)> <suffix>'"
+  - "The list contains no img element and no script element"
+  - "No dialog (alert) is raised"
+  - "The button 'Mark done: <img src=x onerror=alert(1)> <suffix>' exists in that row"
