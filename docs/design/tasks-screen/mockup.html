@@ -13,10 +13,8 @@ li time{color:#555;margin:0 12px}button[disabled]{opacity:.5}
 <section class="state"><div class="label">Main state</div>
 <main><h1>Tasks</h1>
 <form aria-label="Add task">
-<label>Title<br><input type="text" aria-invalid="true" value=""></label>
-<p class="err">Title is required</p>
-<label>Due date (optional)<br><input type="date" aria-invalid="true" value="2026-11-15"></label>
-<p class="err">Invalid due date</p>
+<label>Title<br><input type="text" value=""></label>
+<label>Due date (optional)<br><input type="date"></label>
 <p><button type="submit">Add task</button></p></form>
 <p class="notice" role="status">Task not found</p>
 <h2>Open tasks</h2>
@@ -26,6 +24,24 @@ li time{color:#555;margin:0 12px}button[disabled]{opacity:.5}
 <li>Book venue <time datetime="2026-12-01">Due 2026-12-01</time><button aria-label="Mark done: Book venue">Mark done</button></li>
 <li>Order snacks <button aria-label="Mark done: Order snacks">Mark done</button></li>
 </ul></main></section>
+<section class="state"><div class="label">Validation: title</div>
+<form aria-label="Add task">
+<label>Title<br><input type="text" aria-invalid="true" value=""></label>
+<p class="err">Title is required</p>
+<label>Due date (optional)<br><input type="date" value="2026-11-15"></label>
+<p><button type="submit">Add task</button></p></form></section>
+<section class="state"><div class="label">Validation: title too long</div>
+<form aria-label="Add task">
+<label>Title<br><input type="text" aria-invalid="true" value="A title longer than 200 characters…"></label>
+<p class="err">Title can be at most 200 characters</p>
+<label>Due date (optional)<br><input type="date"></label>
+<p><button type="submit">Add task</button></p></form></section>
+<section class="state"><div class="label">Validation: invalid due date (server returned invalid_due_date, e.g. 2026-02-30)</div>
+<form aria-label="Add task">
+<label>Title<br><input type="text" value="Write report"></label>
+<label>Due date (optional)<br><input type="date" aria-invalid="true"></label>
+<p class="err">Invalid due date</p>
+<p><button type="submit">Add task</button></p></form></section>
 <section class="state"><div class="label">Empty</div><h2>Open tasks</h2><p>No open tasks</p></section>
 <section class="state"><div class="label">Loading</div><h2>Open tasks</h2><p role="status">Loading tasks…</p></section>
 <section class="state"><div class="label">Load error</div><h2>Open tasks</h2><p role="alert">Could not load tasks.</p><button>Try again</button></section>

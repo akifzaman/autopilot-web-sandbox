@@ -27,5 +27,5 @@ fields:
     shown_as: not shown; identifies the error
     api: FieldError.code
   - name: not-found notice
-    shown_as: "notice 'Task not found'"
-    api: NotFoundError.message
+    shown_as: "client copy 'Task not found' shown when error is not_found"
+    api: NotFoundError.error
