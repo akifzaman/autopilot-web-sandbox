@@ -242,3 +242,113 @@ describe('GET /api/tasks', () => {
     expect(await list(app3)).toEqual({ tasks: [] });
   });
 });
+
+describe('POST /api/tasks contract errors', () => {
+  const raw = (app: FastifyInstance, payload: string, contentType: string) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      headers: { 'content-type': contentType },
+      payload,
+    });
+  const json = (app: FastifyInstance, body: unknown) =>
+    raw(app, JSON.stringify(body), 'application/json');
+  const invalid = { error: 'invalid_request', message: expect.any(String) };
+
+  it('TC-40 rejects wrongly shaped bodies with invalid_request', async () => {
+    const app = make();
+    const bodies = [
+      { title: 123 },
+      { title: null },
+      { title: 'A', dueDate: 20261115 },
+      ['Write report'],
+      'Write report',
+      { title: 'A', priority: 1 },
+    ];
+    for (const body of bodies) {
+      const res = await json(app, body);
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual(invalid);
+    }
+    expect(await list(app)).toEqual({ tasks: [] });
+  });
+
+  it('TC-41 rejects malformed or empty JSON with invalid_request', async () => {
+    const app = make();
+    for (const payload of ['{"title":', '']) {
+      const res = await raw(app, payload, 'application/json');
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual(invalid);
+    }
+    expect(await list(app)).toEqual({ tasks: [] });
+  });
+
+  it("TC-42 doesn't let clients set id, status or createdAt", async () => {
+    const app = make();
+    const bodies = [
+      { title: 'A', status: 'done' },
+      { title: 'A', id: '11111111-1111-4111-8111-111111111111' },
+      { title: 'A', createdAt: '2000-01-01T00:00:00.000Z' },
+    ];
+    for (const body of bodies) {
+      const res = await json(app, body);
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe('invalid_request');
+    }
+    expect(await list(app)).toEqual({ tasks: [] });
+  });
+
+  it('TC-43 rejects non-JSON content types with 415', async () => {
+    const app = make();
+    for (const [payload, type] of [
+      ['Write report', 'text/plain'],
+      ['title=Write+report', 'application/x-www-form-urlencoded'],
+    ] as const) {
+      const res = await raw(app, payload, type);
+      expect(res.statusCode).toBe(415);
+      expect(res.json()).toEqual(invalid);
+    }
+    expect(await list(app)).toEqual({ tasks: [] });
+  });
+
+  it('TC-44 rejects titles over the schema maximum cheaply', async () => {
+    const app = make();
+    const over = await json(app, { title: 'a'.repeat(10001) });
+    expect(over.statusCode).toBe(400);
+    expect(over.json().error).toBe('invalid_request');
+    const at = await json(app, { title: 'a'.repeat(10000) });
+    expect(at.statusCode).toBe(400);
+    expect(at.json().error).toBe('validation_failed');
+    expect(at.json().errors[0].code).toBe('title_too_long');
+    expect(await list(app)).toEqual({ tasks: [] });
+  });
+
+  it('TC-45 rejects bodies larger than 16 KiB', async () => {
+    const app = make();
+    const res = await json(app, { title: 'é'.repeat(10000) });
+    expect(res.statusCode).toBe(413);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(Object.keys(res.json())).not.toContain('stack');
+    expect(res.payload).not.toMatch(/at |FST_/);
+    expect(await list(app)).toEqual({ tasks: [] });
+  });
+
+  it('TC-47 returns the contract 500 body when the store fails', async () => {
+    const base = new InMemoryTaskStore();
+    const failing = {
+      insert: () => {
+        throw new Error('db exploded');
+      },
+      findById: base.findById.bind(base),
+      listByStatus: base.listByStatus.bind(base),
+      setStatus: base.setStatus.bind(base),
+    };
+    const app = buildApp({ store: failing });
+    apps.push(app);
+    const res = await json(app, { title: 'Write report' });
+    expect(res.statusCode).toBe(500);
+    expect(res.json()).toEqual({ error: 'internal_error', message: 'Something went wrong' });
+    expect(res.payload).not.toContain('db exploded');
+    expect(res.payload).not.toContain('stack');
+  });
+});

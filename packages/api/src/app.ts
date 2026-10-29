@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { contractErrorHandler } from './errors.js';
 import { taskRoutes } from './routes/tasks.js';
 import { InMemoryTaskStore, type TaskStore } from './tasks/store.js';
 
@@ -13,7 +14,16 @@ export interface AppOptions {
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
-  const app = Fastify({ logger: options.logger ?? false });
+  // Fastify's default Ajv coerces types and strips extra properties, which would turn
+  // wrongly shaped bodies into 201s; the contract needs them rejected as 400.
+  const app = Fastify({
+    logger: options.logger ?? false,
+    bodyLimit: 16 * 1024,
+    ajv: { customOptions: { coerceTypes: false, removeAdditional: false } },
+  });
+  app.setErrorHandler(contractErrorHandler);
+  // Fastify parses text/plain by default; the API accepts JSON only, so it answers 415.
+  app.removeContentTypeParser('text/plain');
   const store = options.store ?? new InMemoryTaskStore();
 
   app.register(
