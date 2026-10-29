@@ -134,3 +134,31 @@ it("keeps the row and shows an error when marking done fails with 500", async ()
   expect(rowTitles()).toEqual(["A"]);
   expect(screen.getByRole("button", { name: "Mark done: A" })).toBeEnabled();
 });
+
+it('TC-UI-1 keeps the form usable while the list is loading', () => {
+  vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)));
+  render(<TasksScreen />);
+  expect(screen.getByRole('form', { name: 'Add task' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Title')).toBeEnabled();
+  expect(screen.getByLabelText('Due date (optional)')).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Add task' })).toBeEnabled();
+});
+
+it('AC-1 after a 201 the list is re-fetched and shows the new task', async () => {
+  const f = vi
+    .fn()
+    .mockResolvedValueOnce(ok([]))
+    .mockResolvedValueOnce({ status: 201, json: async () => task('1', 'New') })
+    .mockResolvedValueOnce(ok([task('1', 'New')]));
+  vi.stubGlobal('fetch', f);
+  render(<TasksScreen />);
+  await screen.findByText('No open tasks');
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
+  expect(await screen.findByRole('listitem')).toHaveTextContent('New');
+  expect(f.mock.calls.map((c) => (c[1] as { method?: string } | undefined)?.method ?? 'GET')).toEqual([
+    'GET',
+    'POST',
+    'GET',
+  ]);
+});

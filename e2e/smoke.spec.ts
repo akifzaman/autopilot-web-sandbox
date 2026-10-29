@@ -7,3 +7,8 @@ test("home page shows the Tasks screen", async ({ page }) => {
     page.getByRole("heading", { level: 2, name: "Open tasks" }),
   ).toBeVisible();
 });
+
+test('the Add task form is present', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('form', { name: 'Add task' })).toBeVisible();
+});
