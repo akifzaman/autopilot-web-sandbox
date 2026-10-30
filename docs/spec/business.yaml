@@ -82,3 +82,6 @@ acceptance_criteria:
 - id: AC-22
   story: S-4
   text: An open task without a due date is never shown in red.
+- id: AC-23
+  story: S-4
+  text: "'Today' is the browser's local calendar date. Take a browser whose local date is 2026-11-10 while the UTC date is already 2026-11-11 (or is still 2026-11-09). An open task due 2026-11-09 is shown in red. An open task due 2026-11-10 is not shown in red. Neither the server's date nor the UTC date changes the result."
