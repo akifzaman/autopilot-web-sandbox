@@ -300,6 +300,119 @@ Expected:
 - The paragraph 'No open tasks' is visible
 - The list 'Open tasks' is not present and there is no table
 
+## AC-20
+
+### TC-UI-16: overdue tasks show a red due date and keep their server order
+Verifies: AC-20
+
+Preconditions:
+- GET /api/tasks and other calls are stubbed with page.route so the list content is exact
+- The browser clock is fixed with page.clock.setFixedTime and the context timezoneId is set, so the local date is 2026-11-10
+- timezoneId 'Europe/Berlin' and fixed time 2026-11-10T12:00:00+01:00
+- GET /api/tasks returns in this order: 'Old' due 2020-01-01, 'Yesterday' due 2026-11-09, 'Today' due 2026-11-10, 'Tomorrow' due 2026-11-11, 'Undated' with no date
+
+Steps:
+1. Open the Tasks page
+2. Read the rows of the list 'Open tasks' top to bottom
+
+Expected:
+- The rows are Old, Yesterday, Today, Tomorrow, Undated in exactly this order
+- In rows 'Old' and 'Yesterday' the time text 'Due 2020-01-01' and 'Due 2026-11-09' has the colour rgb(176, 0, 32)
+- The page does not reorder or group the rows
+
+### TC-UI-17: overdue rows carry the visible text label Overdue; only the date and label are red
+Verifies: AC-20
+
+Preconditions:
+- GET /api/tasks and other calls are stubbed with page.route so the list content is exact
+- The browser clock is fixed with page.clock.setFixedTime and the context timezoneId is set, so the local date is 2026-11-10
+- timezoneId 'Europe/Berlin' and fixed time 2026-11-10T12:00:00+01:00
+- GET /api/tasks returns in this order: 'Old' due 2020-01-01, 'Yesterday' due 2026-11-09, 'Today' due 2026-11-10, 'Tomorrow' due 2026-11-11, 'Undated' with no date
+
+Steps:
+1. Open the Tasks page
+2. Look at the rows 'Old' and 'Yesterday'
+
+Expected:
+- Row 'Old' and row 'Yesterday' each contain the visible text 'Overdue' right after the due date, coloured rgb(176, 0, 32) with font-weight 600
+- The title text 'Old' and 'Yesterday' and the button 'Mark done: Old' are not red
+- The list 'Open tasks' contains the text 'Overdue' exactly 2 times
+
+## AC-21
+
+### TC-UI-18: tasks due today or later are not red and have no Overdue label
+Verifies: AC-21
+
+Preconditions:
+- GET /api/tasks and other calls are stubbed with page.route so the list content is exact
+- The browser clock is fixed with page.clock.setFixedTime and the context timezoneId is set, so the local date is 2026-11-10
+- timezoneId 'Europe/Berlin' and fixed time 2026-11-10T12:00:00+01:00
+- GET /api/tasks returns in this order: 'Old' due 2020-01-01, 'Yesterday' due 2026-11-09, 'Today' due 2026-11-10, 'Tomorrow' due 2026-11-11, 'Undated' with no date
+
+Steps:
+1. Open the Tasks page
+2. Look at the rows 'Today' and 'Tomorrow'
+
+Expected:
+- Row 'Today' shows 'Due 2026-11-10' and row 'Tomorrow' shows 'Due 2026-11-11'
+- In both rows the time element colour is not rgb(176, 0, 32)
+- Neither row contains the text 'Overdue'
+
+## AC-22
+
+### TC-UI-19: a task without a due date is never red
+Verifies: AC-22
+
+Preconditions:
+- GET /api/tasks and other calls are stubbed with page.route so the list content is exact
+- The browser clock is fixed with page.clock.setFixedTime and the context timezoneId is set, so the local date is 2026-11-10
+- timezoneId 'Europe/Berlin' and fixed time 2026-11-10T12:00:00+01:00
+- GET /api/tasks returns in this order: 'Old' due 2020-01-01, 'Yesterday' due 2026-11-09, 'Today' due 2026-11-10, 'Tomorrow' due 2026-11-11, 'Undated' with no date
+
+Steps:
+1. Open the Tasks page
+2. Look at the row 'Undated'
+
+Expected:
+- Row 'Undated' has no 'Due' text, no time element and no 'Overdue' text
+- Nothing in row 'Undated' is coloured rgb(176, 0, 32)
+
+## AC-23
+
+### TC-UI-20: local date wins when UTC is already tomorrow (west of UTC)
+Verifies: AC-23
+
+Preconditions:
+- GET /api/tasks and other calls are stubbed with page.route so the list content is exact
+- The browser clock is fixed with page.clock.setFixedTime and the context timezoneId is set, so the local date is 2026-11-10
+- timezoneId 'America/Los_Angeles' and fixed time 2026-11-11T04:00:00Z, so the local time is 2026-11-10 20:00 and the UTC date is 2026-11-11
+- GET /api/tasks returns in this order: 'Yesterday' due 2026-11-09, 'Today' due 2026-11-10; the server date plays no part
+
+Steps:
+1. Open the Tasks page
+2. Look at the rows 'Yesterday' and 'Today'
+
+Expected:
+- Row 'Yesterday' has the red time element and the 'Overdue' label
+- Row 'Today' is not red and has no 'Overdue' text
+
+### TC-UI-21: local date wins when UTC is still yesterday (east of UTC)
+Verifies: AC-23
+
+Preconditions:
+- GET /api/tasks and other calls are stubbed with page.route so the list content is exact
+- The browser clock is fixed with page.clock.setFixedTime and the context timezoneId is set, so the local date is 2026-11-10
+- timezoneId 'Pacific/Kiritimati' (UTC+14) and fixed time 2026-11-09T18:00:00Z, so the local time is 2026-11-10 08:00 and the UTC date is 2026-11-09
+- GET /api/tasks returns in this order: 'Yesterday' due 2026-11-09, 'Today' due 2026-11-10; the server date plays no part
+
+Steps:
+1. Open the Tasks page
+2. Look at the rows 'Yesterday' and 'Today'
+
+Expected:
+- Row 'Yesterday' has the red time element and the 'Overdue' label
+- Row 'Today' is not red and has no 'Overdue' text
+
 ## Security / rendering
 
 ### TC-UI-15: titles are rendered as text and never as HTML
