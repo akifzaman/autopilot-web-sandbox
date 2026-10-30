@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listOpenTasks, type Task } from './api/tasks';
+import { listOpenTasks, markTaskDone, type Task } from './api/tasks';
 import { AddTaskForm } from './AddTaskForm';
 import { OpenTaskList } from './OpenTaskList';
 
@@ -66,7 +66,11 @@ export function TasksScreen() {
     <>
       <h1>Tasks</h1>
       <AddTaskForm onCreated={refresh} />
-      {/* U-7 adds the notice here */}
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
       <h2>Open tasks</h2>
       {state.status === "loading" && <p role="status">Loading tasks…</p>}
       {state.status === "error" && (
