@@ -11,6 +11,10 @@ stories:
   as_a: team member
   i_want: to see the team's open tasks sorted by due date
   so_that: I can see what is outstanding and what is due first
+- id: S-4
+  as_a: team member
+  i_want: overdue open tasks to show in red
+  so_that: I can spot late work at a glance
 acceptance_criteria:
 - id: AC-1
   story: S-1
@@ -69,3 +73,12 @@ acceptance_criteria:
 - id: AC-19
   story: S-3
   text: When the team has no open tasks, the list shows an empty-state message (for example 'No open tasks') instead of an empty table.
+- id: AC-20
+  story: S-4
+  text: When today is 2026-11-10, an open task due 2026-11-09 (or any earlier date, for example 2020-01-01) is shown in red in the open-tasks list, and it keeps its sorted position.
+- id: AC-21
+  story: S-4
+  text: When today is 2026-11-10, an open task due 2026-11-10 (today) or 2026-11-11 (later) is not shown in red.
+- id: AC-22
+  story: S-4
+  text: An open task without a due date is never shown in red.
