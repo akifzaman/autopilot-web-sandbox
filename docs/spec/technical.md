@@ -37,7 +37,7 @@ Node runs request handlers on a single thread and each store operation is synchr
 - **Tasks API client (packages/web/src/api/tasks.ts)**: Typed wrappers `listOpenTasks()`, `createTask(input)` and `markTaskDone(id)` over `fetch`. Parses `Task`, `ValidationError` and `NotFoundError` bodies into a discriminated-union result.
 - **TasksScreen (packages/web/src/tasks/TasksScreen.tsx)**: Screen container rendered by `App`. Loads the open tasks, holds the list state, and connects AddTaskForm and OpenTaskList. Shows loading and load-error states.
 - **AddTaskForm (packages/web/src/tasks/AddTaskForm.tsx)**: Title and optional due-date inputs with a submit button. Shows each field error message from the API next to its field, keeps the entered values when an add fails, and clears the inputs after a successful add.
-- **OpenTaskList (packages/web/src/tasks/OpenTaskList.tsx)**: Renders the open tasks in server order. Shows each title as plain text and the due date, or nothing when there is none, with a Mark done button per row. Shows the 'No open tasks' message when the list is empty.
+- **OpenTaskList (packages/web/src/tasks/OpenTaskList.tsx)**: Renders the open tasks in server order. Shows each title as plain text and the due date, or nothing when there is none, with a Mark done button per row. Shows the 'No open tasks' message when the list is empty. Rows whose dueDate is before the browser's local date are highlighted as overdue (red due date plus an 'Overdue' label), without re-sorting.
 
 ## Data model
 
