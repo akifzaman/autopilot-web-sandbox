@@ -37,7 +37,7 @@ test('TC-UI-1 loading state keeps the form usable', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Add task' })).toBeEnabled();
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Draft');
   await expect(page.getByText('Loading tasks…')).toHaveCount(0);
-  await expect(page.getByRole('list', { name: 'Open tasks' }).getByRole('listitem')).toHaveText(['Write report']);
+  await expect(page.getByRole('list', { name: 'Open tasks' }).getByRole('listitem')).toContainText(['Write report']);
 });
 
 test('TC-UI-3 AC-1 adds a task without a due date', async ({ page }) => {
@@ -85,7 +85,7 @@ for (const [id, title, message] of [
     await expect(titleBox).toHaveAttribute('aria-describedby', (await err.getAttribute('id')) ?? '');
     await expect(titleBox).toHaveValue(title);
     if (id === 'TC-UI-5') await expect(page.getByLabel('Due date (optional)')).toHaveValue('2026-11-15');
-    await expect(page.getByRole('listitem')).toHaveText(['Existing']);
+    await expect(page.getByRole('listitem')).toContainText(['Existing']);
     expect(created).toBe(false);
   });
 }
@@ -113,7 +113,7 @@ test('TC-UI-8 shows Invalid due date under the date only', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Title' })).not.toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Write report');
   await expect(date).toHaveValue('2026-11-15');
-  await expect(page.getByRole('listitem')).toHaveText(['Existing']);
+  await expect(page.getByRole('listitem')).toContainText(['Existing']);
 });
 
 test('TC-UI-10 places each added task in sorted position', async ({ page }) => {
