@@ -1,0 +1,19 @@
+fields:
+  - name: id
+    shown_as: not shown; row key and the {id} in the Mark done URL
+    api: Task.id
+  - name: title
+    shown_as: plain text in each list row; red when overdue
+    api: Task.title
+  - name: dueDate
+    shown_as: "'Due YYYY-MM-DD' in the row, red when overdue, nothing when null"
+    api: Task.dueDate
+  - name: overdue label
+    shown_as: "'Overdue' text after the due date, only when dueDate is before local today"
+    api: Task.dueDate
+  - name: status
+    shown_as: not shown; only open tasks are listed
+    api: Task.status
+  - name: today
+    shown_as: not shown; browser local date as YYYY-MM-DD, used to compare with dueDate
+    missing: the API gives no current date; client local date by design (R-15)
