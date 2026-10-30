@@ -6,7 +6,7 @@ fields:
     shown_as: plain text in each list row
     api: Task.title
   - name: dueDate
-    shown_as: "'Due YYYY-MM-DD' in the row, or nothing when null"
+    shown_as: "'Due YYYY-MM-DD' in the row (red, followed by an 'Overdue' label when before today), or nothing when null"
     api: Task.dueDate
   - name: status
     shown_as: not shown; only open tasks are listed
@@ -29,3 +29,9 @@ fields:
   - name: not-found notice
     shown_as: "client copy 'Task not found' shown when error is not_found"
     api: NotFoundError.error
+  - name: today
+    shown_as: not shown; local date compared with dueDate for the overdue highlight
+    client: "browser's local calendar date (YYYY-MM-DD from getFullYear/getMonth/getDate of new Date()), computed when the list renders; not UTC, not from the server"
+  - name: overdue
+    shown_as: red due date plus visible Overdue label
+    client: status is open and dueDate is not null and dueDate < today
