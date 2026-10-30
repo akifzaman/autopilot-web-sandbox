@@ -1,9 +1,9 @@
 # Business logic spec
 
-> Project `autopilot-web-sandbox` · owner: BA/PO · draft 1 · approved when this file is merged to `main`.
+> Project `autopilot-web-sandbox` · owner: BA/PO · draft changed by AWS-27 · approved when this file is merged to `main`.
 
 ## Overview
-autopilot-web-sandbox is a simple shared task list for small teams. Any team member can add a task with a short title and, if they want, a due date. Members mark tasks done when they finish them. Everyone sees the same list of the team's open tasks, ordered by due date, so the team can see at a glance what is still outstanding and what is due first. The product is deliberately minimal: capture a task, finish it, see what's left.
+autopilot-web-sandbox is a simple shared task list for small teams. Any team member can add a task with a short title and, if they want, a due date. Members mark tasks done when they finish them. Everyone sees the same list of the team's open tasks, ordered by due date, so the team can see at a glance what is still outstanding and what is due first. Open tasks whose due date has already passed are shown in red so late work stands out. Whether a task has passed its due date is judged in the member's browser against the member's own local date. The product is deliberately minimal: capture a task, finish it, see what's left.
 
 ## Business rules
 - R-1: A task must have a title. A title that is empty or contains only whitespace is invalid, and the task is not created.
@@ -20,6 +20,8 @@ autopilot-web-sandbox is a simple shared task list for small teams. Any team mem
 - R-12: The open-tasks list is sorted by due date, earliest first. Tasks without a due date come after all tasks with one.
 - R-13: Tasks with the same due date, and tasks without a due date, are ordered by when they were added, oldest first.
 - R-14: When an add fails validation, the member sees a message that says what is wrong (missing title, title too long, or invalid due date), and nothing is saved.
+- R-15: An open task is overdue when its due date is before today's date. A task due today, a task due later and a task without a due date are not overdue. Overdue open tasks are shown in red in the open-tasks list. Being overdue does not change a task's position in the list.
+- R-16: 'Today' for the overdue check is the member's local calendar date, taken from the member's browser (device clock and time zone) when the list is shown. The server's date and UTC are not used, and the API does not decide or return whether a task is overdue.
 
 ## Workflows
 ### Add a task
@@ -27,7 +29,7 @@ autopilot-web-sandbox is a simple shared task list for small teams. Any team mem
 2. The member enters a title and, if they want, picks a due date.
 3. The member submits the task.
 4. The system trims the title and checks the title and due date against the rules.
-5. If they're valid, the system saves the task as open and it appears in the open-tasks list in its sorted position.
+5. If they're valid, the system saves the task as open and it appears in the open-tasks list in its sorted position. If its due date is before the member's local date (worked out in the browser), it shows in red.
 6. If they're invalid, the system shows a validation message, saves nothing, and keeps what the member entered so they can correct it.
 
 ### Mark a task done
@@ -39,7 +41,8 @@ autopilot-web-sandbox is a simple shared task list for small teams. Any team mem
 ### Review open tasks
 1. The member opens the team's task list.
 2. The system shows all of the team's open tasks, sorted by due date (earliest first, tasks without a due date last, ties oldest first).
-3. If there are no open tasks, the system shows an empty-state message instead of a list.
+3. The browser works out today's date from the member's local date. Each open task whose due date is before that date is shown in red; all other tasks are shown normally.
+4. If there are no open tasks, the system shows an empty-state message instead of a list.
 
 ## User stories and acceptance criteria
 
@@ -74,6 +77,14 @@ So that I can see what is outstanding and what is due first.
 - **AC-18** Open tasks with the same due date, and open tasks without a due date, are listed in the order they were added, oldest first.
 - **AC-19** When the team has no open tasks, the list shows an empty-state message (for example 'No open tasks') instead of an empty table.
 
+### S-4: as team member, I want overdue open tasks to show in red
+So that I can spot late work at a glance.
+
+- **AC-20** When today is 2026-11-10, an open task due 2026-11-09 (or any earlier date, for example 2020-01-01) is shown in red in the open-tasks list, and it keeps its sorted position.
+- **AC-21** When today is 2026-11-10, an open task due 2026-11-10 (today) or 2026-11-11 (later) is not shown in red.
+- **AC-22** An open task without a due date is never shown in red.
+- **AC-23** 'Today' is the browser's local calendar date. Take a browser whose local date is 2026-11-10 while the UTC date is already 2026-11-11 (or is still 2026-11-09). An open task due 2026-11-09 is shown in red. An open task due 2026-11-10 is not shown in red. Neither the server's date nor the UTC date changes the result.
+
 ## Edge cases and validations
 - Empty title, or a title that is only spaces, tabs or newlines: rejected as missing (AC-3, AC-4).
 - Title length right at the limit: 200 characters is accepted, 201 is rejected; the length is measured after trimming (AC-5, AC-6, AC-8).
@@ -81,7 +92,15 @@ So that I can see what is outstanding and what is due first.
 - Titles that contain markup such as '<b>x</b>' are stored and shown as literal text, never rendered as HTML.
 - Due date that doesn't exist (for example 2026-02-30 or 2026-13-01) or isn't a date: rejected (AC-9).
 - 29 February is accepted only in leap years (2028-02-29 is valid, 2027-02-29 is not).
-- Due date in the past: accepted (AC-10).
+- Due date in the past: accepted (AC-10), and the new task shows in red right away (AC-20).
+- Due date equal to today: not overdue and not red; it turns red from the next day on (AC-21).
+- Task without a due date: never overdue (AC-22).
+- The date changes while the list is open (for example past midnight): the red highlight is updated the next time the list is loaded; live updates aren't required.
+- Today is the member's own local calendar date, as computed in their browser, so members in different time zones may briefly see a different set of overdue tasks around midnight (AC-23).
+- The browser's local date differs from the UTC date or the server's date (for example late in the evening west of UTC, or early in the morning east of UTC): the browser's local date wins (AC-23).
+- The device clock is wrong: overdue is judged against the date the device shows; the app doesn't correct it.
+- Overdue tasks are not reordered or grouped; the sort order from R-12 and R-13 stays the same.
+- Marking an overdue task done removes it from the list like any other task (AC-12).
 - Duplicate tasks (same title, or same title and due date): allowed, each is separate (AC-11).
 - Marking an already-done task done: no error, no change (AC-13).
 - Marking a task that doesn't exist (for example a stale or forged id): 'not found' result, nothing changes (AC-14).
@@ -99,16 +118,19 @@ So that I can see what is outstanding and what is due first.
 - Task.createdAt: the date and time the task was added, recorded by the system and used only to order tasks that tie on due date.
 - Open-tasks list = all tasks with status 'open', sorted by dueDate ascending, then tasks with no dueDate; within equal dueDate (or no dueDate) sorted by createdAt ascending.
 - Dates are compared as calendar dates, so time zones don't affect the ordering.
+- Overdue is derived and never stored: a task is overdue when its status is 'open', it has a dueDate, and dueDate < today. It's compared as a calendar date, not a timestamp.
+- today (for overdue) = the browser's local calendar date (YYYY-MM-DD from the device's clock and time zone) when the list is shown, computed in the browser. It is not the UTC date and not the server's date, and it is not sent to or returned by the API.
 
 ## Out of scope
 - Editing a task's title or due date after it has been created.
 - Deleting tasks.
 - Reopening a done task, and any view or history of done tasks (pending question Q-2).
 - Assigning tasks to specific members, priorities, labels, descriptions, comments or attachments.
-- Reminders, notifications or overdue alerts.
+- Reminders, notifications or overdue alerts beyond the red highlight in the open-tasks list (no counts, banners, emails or sorting or filtering by overdue).
 - Filtering, searching, or sort orders other than by due date.
 - Due times (time of day) and recurring tasks.
-- Real-time updates pushed to other members' screens.
+- Real-time updates pushed to other members' screens, including re-colouring at midnight while the list is open.
+- A team-wide or server-side 'today' (for example UTC), and an overdue flag in the API.
 - User registration, sign-in and team administration (pending question Q-1).
 
 ## Assumptions
@@ -121,9 +143,14 @@ So that I can see what is outstanding and what is due first.
 - Any member can mark any team task done, because the list belongs to the team and the intent doesn't restrict this.
 - Duplicate titles are allowed, because the intent doesn't forbid them and teams often repeat tasks.
 - Until Q-1 is answered, the app has a single shared team list, and anyone using the app counts as a member of that team; there are no accounts.
+- The optional due date asked for in AWS-22 already exists (S-1, R-4, AC-2, AC-9, AC-10); the change only adds the overdue highlight.
+- A task is overdue only after its due date has fully passed: a task due today isn't overdue yet.
+- Decided by AWS-27 (answers Q-5): 'today' is the member's local calendar date, computed in the browser when the list is shown (R-16, AC-23). Nothing new is stored and the API doesn't change.
+- Done tasks are never shown, so only open tasks can be shown in red.
 
 ## Open questions
 - Q-1: How are teams and members identified? The intent mentions 'teams' and 'members', but the app has no sign-in. Should v1 have one shared team list with no accounts (our current assumption), or support several teams with member sign-in so each team only sees its own tasks?
 - Q-2: Can a member undo 'mark done' (reopen a task), and should done tasks be visible anywhere, such as a 'done' list or a toggle? The spec currently treats done as final and hidden.
 - Q-3: Should due dates in the past be rejected when a task is added? The spec currently accepts them.
 - Q-4: May a title contain line breaks, or must it be a single line? The spec currently says nothing about this beyond the trimming and length rules.
+- Q-6: Which part of an overdue task is red: the due date only or the whole row? And should there also be a text cue such as 'Overdue', so people who can't see colour differences can tell (accessibility)?

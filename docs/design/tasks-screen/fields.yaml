@@ -1,0 +1,37 @@
+fields:
+  - name: id
+    shown_as: not shown; row key and the {id} in the Mark done URL
+    api: Task.id
+  - name: title
+    shown_as: plain text in each list row
+    api: Task.title
+  - name: dueDate
+    shown_as: "'Due YYYY-MM-DD' in the row (red, followed by an 'Overdue' label when before today), or nothing when null"
+    api: Task.dueDate
+  - name: status
+    shown_as: not shown; only open tasks are listed
+    api: Task.status
+  - name: title input
+    shown_as: "text input labelled 'Title'"
+    api: CreateTaskRequest.title
+  - name: dueDate input
+    shown_as: "date input labelled 'Due date (optional)'"
+    api: CreateTaskRequest.dueDate
+  - name: field error placement
+    shown_as: error element directly below the matching input
+    api: FieldError.field
+  - name: field error text
+    shown_as: error text below the input, verbatim
+    api: FieldError.message
+  - name: field error code
+    shown_as: not shown; identifies the error
+    api: FieldError.code
+  - name: not-found notice
+    shown_as: "client copy 'Task not found' shown when error is not_found"
+    api: NotFoundError.error
+  - name: today
+    shown_as: not shown; local date compared with dueDate for the overdue highlight
+    client: "browser's local calendar date (YYYY-MM-DD from getFullYear/getMonth/getDate of new Date()), computed when the list renders; not UTC, not from the server"
+  - name: overdue
+    shown_as: red due date plus visible Overdue label
+    client: status is open and dueDate is not null and dueDate < today

@@ -1,19 +1,21 @@
-import { render, screen } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
-import { App } from './App';
+import { render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { App } from "./App";
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('shows ok when the API health check succeeds', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok' }) }));
+it("renders the Tasks heading", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue({ status: 200, json: async () => ({ tasks: [] }) }),
+  );
   render(<App />);
-  expect(await screen.findByText('API: ok')).toBeInTheDocument();
-});
-
-it('shows unreachable when the API health check fails', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-  render(<App />);
-  expect(await screen.findByText('API: unreachable')).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { level: 1, name: "Tasks" }),
+  ).toBeInTheDocument();
+  expect(await screen.findByText("No open tasks")).toBeInTheDocument();
 });
