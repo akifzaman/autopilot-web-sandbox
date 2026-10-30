@@ -99,6 +99,7 @@ test("TC-UI-9 list shows rows in the server order: dated by date, same date and 
   await page.route("**/api/tasks", (route) =>
     route.fulfill({ json: { tasks } }),
   );
+  await page.clock.setFixedTime(new Date("2026-10-01T12:00:00Z"));
   await page.goto("/");
   const rows = page
     .getByRole("list", { name: "Open tasks" })
@@ -124,6 +125,7 @@ test("TC-UI-9 page does not reorder rows itself", async ({ page }) => {
   await page.route("**/api/tasks", (route) =>
     route.fulfill({ json: { tasks } }),
   );
+  await page.clock.setFixedTime(new Date("2026-10-01T12:00:00Z"));
   await page.goto("/");
   await expect(
     page.getByRole("list", { name: "Open tasks" }).getByRole("listitem"),

@@ -28,6 +28,15 @@ li time {
   color: #555;
   margin: 0 12px;
 }
+li time.overdue {
+  color: #b00020;
+  margin-right: 6px;
+}
+.tag {
+  color: #b00020;
+  font-weight: 600;
+  margin-right: 12px;
+}
 button[disabled] {
   opacity: 0.5;
 }
